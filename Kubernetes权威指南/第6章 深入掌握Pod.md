@@ -529,19 +529,22 @@ QOS是K8S中的一种资源保护机制，其主要是针对不可压缩资源�
 
 
 
-# 1.5 Pod控制器
+# 1.5 Pod调度
 
-在Kubernetes平台上，我们很少会直接创建一个Pod，在大多数情况下会通过RC、Deployment、DaemonSet、Job等控制器完成对一组Pod副本的创建、调度及全生命周期的自动控制任务。Pod控制器是用于实现管理pod的中间层，确保pod资源符合预期的状态，pod的资源出现故障时，会尝试进行重启，当根据重启策略无效，则会重新新建pod的资源。
+在Kubernetes平台上，我们很少会直接创建一个Pod，在大多数情况下会通过RC、Deployment、DaemonSet、Job等控制器完成对一 组Pod副本的创建、调度及全生命周期的自动控制任务。
 
-在最早的Kubernetes版本里是没有这么多Pod副本控制器的，只有一个Pod副本控制器RC（Replication Controller），这个控制器是这 样设计实现的：RC独立于所控制的Pod，并通过Label标签这个松耦合关联关系控制目标Pod实例的创建和销毁，随着Kubernetes的发 展，RC也出现了新的继任者——Deployment，用于更加自动地完成Pod副本的部署、版本更新、回滚等功能。 
+## 1.5.1 Pod控制器
 
-严谨地说，RC的继任者其实并不是Deployment，而是ReplicaSet，因为 ReplicaSet进一步增强了 RC标签选择器的灵活性。 之前RC的标签选择器只能选择一个标签，而ReplicaSet拥有集合式的标签选择器，可以选择多个Pod标签，如下所示： 
+Pod通过控制器实现应用的运维，如伸缩、升级等，控制器决定了创建pod资源的方式和类型，在集群上管理和运行容器的对象通过label-selector 相关联。
 
+控制器 又称之为工作负载，常见包含以下类型控制器：
 
-
-
-
-
+- ReplicationController（RC） 和 ReplicaSet（RS）
+- Deployment
+- DaemonSet
+- StatefulSet
+- Job/CronJob
+- HorizontalPodAutoscaler（HPA）自动水平伸缩
 
 
 

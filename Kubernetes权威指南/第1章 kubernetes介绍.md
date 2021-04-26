@@ -36,7 +36,7 @@ Kubernetes属于主从分布式架构，主要由Master Node和Worker Node组成
 
 - kube-proxy 负责为Service提供cluster内部的服务发现和负载均衡；
 
-- Container 负责镜像管理和容器的真正运行（CRI）；
+- Container Runtime 是Kubernetes最重要的组件之一，负责真正管理镜像和容器的生命周期。Kubelet通过 容器运行时接口（Container Runtime Interface，CRI) 与容器运行时交互，以管理镜像和容器。；
 
 
 
@@ -82,17 +82,7 @@ Kubernetes属于主从分布式架构，主要由Master Node和Worker Node组成
 
 
 
-
-
-
-
-
-
-
-
-
-
-# 3 kubernetes主要功能
+# 4 kubernetes主要功能
 
 | 名词             | 解释                                                         |
 | ---------------- | ------------------------------------------------------------ |
@@ -106,3 +96,7 @@ Kubernetes属于主从分布式架构，主要由Master Node和Worker Node组成
 | 服务编排         | 通过文件描述部署服务，使得应用程序部署变得更高效。           |
 | 资源监控         | Node节点组件集成cAdvisor资源收集工具，可通过Heapster汇总整个集群节点资源数据，然后存储到InfluxDB时序数据库，再由Grafana展示。 |
 | 提供认证和授权   | 支持角色访问控制（RBAC）认证授权等策略。                     |
+
+
+
+# 5 kubernetes生态

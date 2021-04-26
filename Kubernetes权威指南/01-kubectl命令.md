@@ -248,8 +248,8 @@ kubectl describe pods/<pod-name>    # 显示Pod的详细信息
 kubectl logs --tail=200 nginx -n default|less
 kubectl logs nginx-deploy -n default          # 查看pod中单个容器日志
 kubectl logs nginx-deploy -c nginx -n default # 查看pod中指定容器日志,如果Pod中运行有多个容器，需使用"-c"指定容器名
-kubectl exec nginx-deploy -c nginx -n default -- ps aux  #不进入容器执行命令,通过kubectl exec命令指定pod，-c指定容器名称,-n指定名称空间,-- 指定执行的命令来进行操作容器
-kubectl exec nginx-deploy-788b9c6b69-tfcrx -c nginx -n default -i -t -- /bin/sh #进入容器,通过kubectl exec命令指定相应的参数 -i -t 来分配一个伪终端和交互式接口，指定 /bin/sh 命令进入容器
+kubectl exec -it podName  -c  containerName -n namespace -- shell comand  #不进入容器执行命令,通过kubectl exec命令指定pod，-c指定容器名称,-n指定名称空间,-- 指定执行的命令来进行操作容器
+kubectl exec -it nginx-deploy -c nginx -n default -- /bin/bash #进入容器,通过kubectl exec命令指定相应的参数 -i -t 来分配一个伪终端和交互式接口，指定 /bin/bash 命令进入容器
 kubectl port-forward --address 0.0.0.0 pod/nginx 8888:80 #将Pod的开放的80端口映射到本地8888
 ```
 

@@ -663,19 +663,360 @@ PV/PVC/StorageClass关系图：
 
 ![20200412104048595](assets/20200412104048595.png)
 
-PersistentVolume（PV）是集群中由管理员配置的一段网络存储。 与普通的Volume不同，PV是Kubernetes中的一个资源对象，创建一个PV相当于创建了一个存储资源对象，这个资源的使用要通过PVC来请求。**主要包括存储能力、访问模式、存储类型、回收策略、后端存储类型等关键信息的设置。**
+**1、PV和PVC**
 
-PersistentVolumeClaim（PVC）是用户对存储资源PV的请求。根据PVC中指定的条件Kubernetes动态的寻找系统中的PV资源并进行绑定。目前PVC与PV匹配可以通过StorageClassName、matchLabels或者matchExpressions三种方式。权限要求可以请求特定的大小和访问模式。**主要包括存储空间请求、访问模式、PV选择条件和存储类别等信息的设置。**
+**PersistentVolume（PV）：**持久化存储数据卷，PV其实是对底层存储的一种抽象，通常是由集群的管理员进行创建和配置 ，底层存储可以是Ceph，GlusterFS，NFS，hostpath等，都是通过插件机制完成与共享存储的对接。 与普通的Volume不同，PV是Kubernetes中的一个资源对象，创建一个PV相当于创建了一个存储资源对象，这个资源的使用要通过PVC来请求。
 
-StorageClass为管理员提供了一种描述他们提供的存储的“类”的方法。 不同的类可能映射到服务质量级别，或备份策略，或者由群集管理员确定的任意策略。 每个 StorageClass 都包含 provisioner、parameters 和 reclaimPolicy 字段， 这些字段会在 StorageClass 需要动态分配 PersistentVolume 时会使用到。
+**PV作为存储资源：主要包括存储能力、访问模式、存储类型、回收策略、后端存储类型等关键信息的设置。**
+
+之前提到的Volume是被定义在Pod上的，属于计算资源的一部分，而实际上，网络存储是相对独立于计算资源而存在的一种实体资源。比如在使用虚拟机的情况下，我们通常会先定义一个网络存储，然后从中划出一个“网盘”并挂接到虚拟机上。Persistent Volume（PV）和与之相关联的Persistent Volume Claim（PVC）也起到了类似的作用
+
+PV可以被理解成Kubernetes集群中的某个网络存储对应的一块存储，它与Volume类似，但有以下区别。 
+
+- PV只能是网络存储，不属于任何Node，但可以在每个Node上访问。
+- PV并不是被定义在Pod上的，而是独立于Pod之外定义的。 
+- PV目前支持的类型包括：gcePersistentDisk、 AWSElasticBlockStore、AzureFile、AzureDisk、FC（Fibre Channel）、Flocker、NFS、iSCSI、RBD（Rados Block Device）、 CephFS、Cinder、GlusterFS、VsphereVolume、Quobyte Volumes、 VMware Photon、Portworx Volumes、ScaleIO Volumes和HostPath（仅供单机测试）。
+
+**PersistentVolumeClaim（PVC）：**持久化数据卷声明，PVC 对象通常由开发人员创建，描述 Pod 所希望使用的持久化存储的属性。比如，Volume 存储的大小、可读写权限等等。PVC绑定PV，消耗的PV资源。是用户对存储资源PV的请求。根据PVC中指定的条件Kubernetes动态的寻找系统中的PV资源并进行绑定。目前PVC与PV匹配可以通过StorageClassName、matchLabels或者matchExpressions三种方式。权限要求可以请求特定的大小和访问模式。**主要包括存储空间请求、访问模式、PV选择条件和存储类别等信息的设置。**
 
 
 
+(1).使用NFS 测试
+
+```
+# 服务端
+$ systemctl stop firewalld.service
+$ yum -y install nfs-utils rpcbind
+$ mkdir -p /data
+$ chmod 755 /data
+$ vim /etc/exports
+/data  10.159.238.0/24(rw,sync,no_root_squash)
+$ systemctl enable rpcbind
+$ systemctl enable nfs-server
+$ systemctl restart rpcbind
+$ systemctl restart nfs-server
+客户端
+$ yum -y install nfs-utils rpcbind
+$ mkdir -p /data
+$ chmod 755 /data
+$ systemctl enable rpcbind
+$ systemctl restart rpcbind
+$ mount -t nfs 10.159.238.40:/data  /data
+```
+
+(2) 创建  [nfs-pv.yaml](assets\nfs-pv.yaml)  文件
+
+```yml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs
+spec:
+  storageClassName:  manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 10.159.238.40
+    path: "/data"
+```
+
+文件的内容定义如下：
+
+- spec.storageClassName：定义了名称为 manual 的 StorageClass，该名称用来将 PVC请求绑定到该 PV。
+- spec.Capacity：定义了当前PV的存储空间为storage=5Gi。
+- spec.nfs： 定义了PV的类型为NFS，并指定了该卷位于节点上的 /data目录。
+- spec.accessModes：定义了访问模式，可定义的模式如下：
+  - ReadWriteMany（RWX）：读写权限，可以被多个节点挂载。
+  - ReadWriteOnce（RWO）：读写权限，但是只能被单个节点挂载；
+  - ReadWriteMany（ROX）：只读权限，可以被多个节点挂载。
+
+(3) 创建pv
+
+```bash
+$ kubectl create -f nfs-pv.yaml
+persistentvolume/nfs created
+$ kubectl  get pv
+NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+nfs    5Gi        RWX            Retain           Available           manual                  13s
+```
+
+可以看到创建后的PV的Status为Available 可用状态，意味着当前PV还没有被PVC绑定使用。
+PV生命周期的不同状态如下：
+
+- Available（可用）：表示可用状态，还未被任何 PVC 绑定
+- Bound（已绑定）：表示 PVC 已经被 PVC 绑定
+- Released（已释放）：PVC 被删除，但是资源还未被集群重新声明
+- Failed（失败）： 表示该 PV 的自动回收失败
+
+另外还有一个RECLAIM POLICY字段输出内容为Retain，这个字段输出的其实是PV的回收策略，目前 PV 支持的策略有三种：
+
+- Retain（保留）：保留数据，需要管理员手工清理数据
+- Recycle（回收）：清除 PV 中的数据，效果相当于执行 rm -rf /thevoluem/*
+- Delete（删除）：与 PV 相连的后端存储完成 volume 的删除操作，当然这常见于云服务商的存储服务，比如 ASW EBS。
+
+> 注意：目前只有 NFS 和 HostPath 两种类型支持回收策略。
 
 
 
+(4) 创建PVC  [nfs-pvc.yaml](assets\nfs-pvc.yaml) 绑定上边的PV
+
+PV 是存储资源，而 PVC 是对 PV 的请求。PVC 跟 Pod 类似：Pod 消费 Node 资源，而 PVC 消费 PV 资源；Pod 能够请求 CPU 和内存资源，而 PVC 请求特定大小和访问模式的数据卷。
+
+```yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc
+spec:
+  storageClassName:  manual
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+```
+
+```bash
+$ kubectl create -f nfs-pvc.yaml
+persistentvolumeclaim/nfs-pvc created
+$ kubectl  get pv
+NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM             STORAGECLASS   REASON   AGE
+nfs    5Gi        RWX            Retain           Bound    default/nfs-pvc   manual                  8m5s
+```
+
+可以看到PV和PVC的状态已经为Bound绑定状态，其中绑定需要检查的条件，包括两部分：
+
+- PV 和 PVC 的 spec 字段。比如，PV 的存储（storage）大小、权限等，必须满足 PVC的要求。
+- PV 和 PVC 的 storageClassName 字段必须一样。
 
 
+
+(5) 创建pod  [web-front.yaml](assets\web-front.yaml)  调用PVC
+
+PVC使用方式和hostpath类似
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-front
+spec:
+  containers:
+  - name: web
+    image: nginx
+    ports:
+      - name: web
+        containerPort: 80
+    volumeMounts:
+        - name: nfs
+          mountPath: "/usr/share/nginx/html"
+  volumes:
+  - name: nfs
+    persistentVolumeClaim:
+      claimName: nfs-pvc
+```
+
+Pod将PVC挂载到容器的html目录，我们在PVC的目录下创建一个文件用来验证：
+
+```
+echo  "hello nginx" > /data/index.html
+```
+
+创建Pod，并验证是否将文件挂载至容器：
+
+```bash
+$ kubectl create -f web-front.yaml
+$ kubectl exec -it web-front -c web -- curl localhost
+hello nginx
+
+```
+
+可以看到输出结果是前面写到PVC卷中的index.html 文件内容。
+
+注意：在创建pod使用nfs的pvc时，node节点必须先挂载nfs，否则会有如下报错
+
+![image-20210426181537234](assets/image-20210426181537234.png)
+
+
+
+**2、StorageClass**
+
+上面PV对象创建的方式为Static Provisioning（静态资源调配），在大规模的生产环境里，面对集群中大量的PVC，需要提前手动创建好PV来与之绑定，这其实是一个非常麻烦的工作。还好kubernetes提供了Dynamic Provisioning（动态资源调配）的机制，即：StorageClass对象，它的作用其实就是创建 PV 的模板。
+
+StorageClass 对象会定义如下两个部分内容：
+
+- PV 的属性。比如，存储类型、Volume 的大小等等。
+- 创建这种 PV 需要用到的存储插件。比如，Ceph 等等。
+
+Kubernetes 有了这样两个信息之后，就能够根据用户提交的 PVC，找到一个对应的StorageClass，然后Kubernetes 就会调用该 StorageClass 声明的存储插件，自动创建出需要的 PV。
+
+（1）创建一个NFS类型的StorageClass，首先需要创建 nfs-client-provisioner（存储插件）：nfs-client 的自动配置程序
+
+ [nfs-client-provisioner.yaml](assets\nfs-client-provisioner.yaml) 
+
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  labels:
+    app: nfs-client-provisioner
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: quay.io/external_storage/nfs-client-provisioner:latest
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: fuseim.pri/ifs
+            - name: NFS_SERVER
+              value: 10.159.238.40 # 修改成自己的 IP
+            - name: NFS_PATH
+              value: /data
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: 10.159.238.40 # 修改成自己的 IP
+            path: /data
+
+```
+
+(2) 为nfs-client程序绑定相应的集群操作权限 ：
+
+ [nfs-client-sa.yaml](assets\nfs-client-sa.yaml) 
+
+```yml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-client-provisioner
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-client-provisioner-runner
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["create", "delete", "get", "list", "watch", "patch", "update"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-nfs-client-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: nfs-client-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+```
+
+(3) 创建StorageClass： [nfs-storageclass.yaml](assets\nfs-storageclass.yaml) 
+
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-data-db
+provisioner: fuseim.pri/ifs
+```
+
+> provisioner 字段的值是：fuseim.pri/ifs，这个是NFS提供的分配器，kubernetes也内置了一些存储的分配器：[https://kubernetes.io/zh/docs/concepts/storage/storage-classes/](https://links.jianshu.com/go?to=https%3A%2F%2Fkubernetes.io%2Fzh%2Fdocs%2Fconcepts%2Fstorage%2Fstorage-classes%2F)
+
+(4) 创建资源对象
+
+```bash
+$ kubectl  create -f  nfs-client-Provisioner.yaml
+$ kubectl  create -f  nfs-client-sa.yaml
+$ kubectl  create -f  nfs-storageclass.yaml 
+$ kubectl get  storageclasses
+NAME         PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+nfs-data-db   fuseim.pri/ifs   Delete          Immediate           false                  5m4s
+```
+
+StorageClass创建完成后，开发人员只需要在 PVC 里指定要使用的 StorageClass 名字即可，PV则会根据PVC的属性定义自动创建。
+
+(5) 创建 [nfs-pvc02.yaml](assets\nfs-pvc02.yaml) 
+
+```yml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc02
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs-data-db
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+创建PVC并查看是否绑定相应的PV
+
+```bash
+$ kubectl  create  -f  nfs-pvc02.yaml
+persistentvolumeclaim/nfs-pvc02 created
+$ kubectl  get pvc
+NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+nfs-pvc     Bound    nfs                                        5Gi        RWX            manual         46m
+nfs-pvc02   Bound    pvc-14781067-3b87-4e5f-950b-4b30807057c5   1Gi        RWO            nfs-data-db    6s
+$ kubectl    get pv
+NAME  CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM  STORAGECLASS   REASON   AGE
+nfs                                        5Gi        RWX            Retain           Bound    default/nfs-pvc     manual             54m
+pvc-14781067-3b87-4e5f-950b-4b30807057c5   1Gi        RWO            Delete           Bound    default/nfs-pvc02   nfs-data-db             15s
+$ ls /data/
+default-nfs-pvc02-pvc-14781067-3b87-4e5f-950b-4b30807057c5  index.html
+```
+
+![image-20210426184549314](assets/image-20210426184549314.png)
+
+可以看到创建完PVC后，StorageClass自动为PVC创建并绑定了对应的PV，而且PV的属性是和PVC相同的，在共享卷中也创建了相关的PV目录，这样我们创建Pod时只需要指定PVC的名字即可，不用再去手动的为PVC创建PV。
+
+> **注意：Kubernetes 只会将StorageClass 定义相同的 PVC 和 PV 绑定起来**
+
+
+
+**总结：**
+
+1. hostPath：属于单节点集群中的持久化存储，Pod需要绑定集群节点。删除pod后，卷里面的文件会继续保持，但pod被重新调度到其他节点时，就无法访问到原数据。不适合作为存储数据库数据的目录。
+2. emptyDir： 用于存储临时数据的简单空目录，生命周期是和pod捆绑的，随着pod创建而创建；删除而销毁，卷的内容将会丢失。emptyDir卷适用于同一个pod中运行的容器之间共享文件。
+3. PVC 描述的，是 Pod 想要使用的持久化存储的属性，比如存储的大小、读写权限等。
+4. PV 描述的，则是一个具体的 Volume 的属性，比如 Volume 的类型、挂载目录、远程存储服务器地址等。
+5. StorageClass 的作用，则是充当 PV 的模板。并且，只有同属于一个 StorageClass 的 PV 和 PVC，才可以绑定在一起。当然，StorageClass 的另一个重要作用，是指定 PV 的 Provisioner（存储插件）。这时候，如果你的存储插件支持 Dynamic Provisioning 的话，Kubernetes 就可以自动为你创建 PV 了。
 
 
 
