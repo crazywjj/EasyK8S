@@ -155,7 +155,7 @@ kubectl get all --all-namespaces        # 查看所有的命名空间
 | componentstatuses          | cs       |
 | configmaps                 | cm       |
 | controllerrevisions        |          |
-| cronjobs                   |          |
+| cronjobs                   | cj       |
 | customresourcedefinition   | crd      |
 | daemonsets                 | ds       |
 | deployments                | deploy   |
@@ -175,7 +175,7 @@ kubectl get all --all-namespaces        # 查看所有的命名空间
 | pods                       |          |
 | podsecuritypolicies        | psp      |
 | podtemplates               |          |
-| replicasets                |          |
+| replicasets                | rs       |
 | replicationcontrollers     | rc       |
 | resourcequotas             | quota    |
 | rolebindings               |          |
@@ -184,7 +184,7 @@ kubectl get all --all-namespaces        # 查看所有的命名空间
 | serviceaccounts            | sa       |
 | services                   | svc      |
 | statefulsets               |          |
-| storageclasses             |          |
+| storageclasses             | sc       |
 |                            |          |
 
 

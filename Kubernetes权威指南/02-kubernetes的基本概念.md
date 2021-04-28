@@ -552,15 +552,42 @@ Volume（存储卷）是Pod中能够被多个容器访问的共享目录。首�
 
 Volume的使用前，需要Pod指定volume的类型和内容（spec.volume）和挂载点（spec.containers.volumeMounts）两个信息。
 
+**Kubernetes支持Volume类型有：**
+
+- emptyDir
+- hostPath
+- gcePersistentDisk
+- awsElasticBlockStore
+- nfs
+- iscsi
+- fc (fibre channel)
+- flocker
+- glusterfs
+- rbd
+- cephfs
+- gitRepo
+- secret
+- persistentVolumeClaim
+- downwardAPI
+- projected
+- azureFileVolume
+- azureDisk
+- vsphereVolume
+- Quobyte
+- PortworxVolume
+- ScaleIO
+- StorageOS
+- local
+
 **常用的数据卷：**
 • 本地（hostPath，emptyDir）
 • 网络（NFS，Ceph，GlusterFS）
 • 公有云（AWS EBS）
 • K8S资源（configmap，secret）
 
-1、emptyDir（临时存储卷）
+**1、emptyDir（临时存储卷）**
 
-一个emptyDir Volume是在Pod分配到Node时创建的。初始内容为空，并且无须指定宿主机上对应的目录文件，pod创建时创建，pod移除时移除。
+一个emptyDir Volume是在Pod分配到Node时创建的。初始内容为空，并且无须指定宿主机上对应的目录文件，pod创建时创建，pod移除时移除。注：删除容器不影响emptyDir。
 
 ```yml
 apiVersion: v1
@@ -591,7 +618,7 @@ Emptydir创建后，在宿主机上的访问路径为`/var/lib/kubelet/pods/<pod
 
 
 
-2、hostPath（节点存储卷）
+**2、hostPath（节点存储卷）**
 
 hostPath允许挂载Node上的文件系统到Pod里面去。如果Pod需要使用Node上的文件，可以使用hostPath。
 
@@ -625,7 +652,83 @@ spec:
 
 
 
-3、NFS（网络存储卷）
+**3、gcePersistentDisk**
+
+gcePersistentDisk可以挂载GCE上的永久磁盘到容器，需要Kubernetes运行在GCE的VM中。与emptyDir不同，Pod删除时，gcePersistentDisk被删除，但[Persistent Disk](http://cloud.google.com/compute/docs/disks) 的内容任然存在。这就意味着gcePersistentDisk能够允许我们提前对数据进行处理，而且这些数据可以在Pod之间“切换”。
+
+**提示：使用gcePersistentDisk，必须用gcloud或使用GCE API或UI 创建PD**
+
+创建PD
+
+使用GCE PD与pod之前，需要创建它
+
+```
+gcloud compute disks create --size=500GB --zone=us-central1-a my-data-disk
+```
+
+示例
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: gcr.io/google_containers/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-pd
+      name: test-volume
+  volumes:
+  - name: test-volume
+    # This GCE PD must already exist.
+    gcePersistentDisk:
+      pdName: my-data-disk
+      fsType: ext4
+```
+
+
+
+**4、awsElasticBlockStore**
+
+awsElasticBlockStore可以挂载AWS上的EBS盘到容器，需要Kubernetes运行在AWS的EC2上。与emptyDir Pod被删除情况不同，Volume仅被卸载，内容将被保留。这就意味着awsElasticBlockStore能够允许我们提前对数据进行处理，而且这些数据可以在Pod之间“切换”。
+
+提示：必须使用aws ec2 create-volumeAWS API 创建EBS Volume，然后才能使用。
+
+**创建EBS Volume**
+
+在使用EBS Volume与pod之前，需要创建它。
+
+```bash
+aws ec2 create-volume --availability-zone eu-west-1a --size 10 --volume-type gp2
+```
+
+AWS EBS配置示例
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-ebs
+spec:
+  containers:
+  - image: gcr.io/google_containers/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /test-ebs
+      name: test-volume
+  volumes:
+  - name: test-volume
+    # This AWS EBS volume must already exist.
+    awsElasticBlockStore:
+      volumeID: <volume-id>
+      fsType: ext4
+```
+
+
+
+**5、NFS（网络存储卷）**
 
 使用NFS网络文件系统提供的共享目录存储数据时，需要在系统中部署一个NFS Server（建议直接部署到服务器）。
 
@@ -654,6 +757,9 @@ spec:
 ```
 
 
+cephfs、glusterfs、iscsi、rbd、storageos可以参考如下链接：
+
+https://github.com/kubernetes/examples/tree/master/volumes
 
 
 
@@ -663,7 +769,7 @@ PV/PVC/StorageClass关系图：
 
 ![20200412104048595](assets/20200412104048595.png)
 
-**1、PV和PVC**
+**1、 PV和PVC**
 
 **PersistentVolume（PV）：**持久化存储数据卷，PV其实是对底层存储的一种抽象，通常是由集群的管理员进行创建和配置 ，底层存储可以是Ceph，GlusterFS，NFS，hostpath等，都是通过插件机制完成与共享存储的对接。 与普通的Volume不同，PV是Kubernetes中的一个资源对象，创建一个PV相当于创建了一个存储资源对象，这个资源的使用要通过PVC来请求。
 
@@ -959,7 +1065,7 @@ provisioner: fuseim.pri/ifs
 (4) 创建资源对象
 
 ```bash
-$ kubectl  create -f  nfs-client-Provisioner.yaml
+$ kubectl  create -f  nfs-client-provisioner.yaml
 $ kubectl  create -f  nfs-client-sa.yaml
 $ kubectl  create -f  nfs-storageclass.yaml 
 $ kubectl get  storageclasses
@@ -1020,17 +1126,11 @@ default-nfs-pvc02-pvc-14781067-3b87-4e5f-950b-4b30807057c5  index.html
 
 
 
-
-
-
-
-
-
-
-
 # 11 StatefulSet
 
-在Kubernetes系统中，Pod的管理对象RC、Deployment、DaemonSet和Job都面向无状态的服务。但现实中有很多服务是有状态的，statefulset是为了解决**有状态服务**的问题，而产生的一种资源类型（deployment和replicaSets是解决无状态服务而设计的）。特别是一些复杂的中间件集群，例如MySQL集群、MongoDB 集群、Akka集群、ZooKeeper集群等，这些应用集群有4个共同点。
+**1、介绍**
+
+statefulset是为了解决**有状态服务**的问题，而产生的一种资源类型（RC、Deployment、replicaSets、DaemonSet 和 Job是解决无状态服务而设计的）。特别是一些复杂的中间件集群，例如MySQL集群、MongoDB 集群、kafka集群、ZooKeeper集群等，这些应用集群有4个共同点。
 
 （1）每个节点都有固定的身份ID，通过这个ID，集群中的成员可以相互发现并通信。 
 
@@ -1040,17 +1140,14 @@ default-nfs-pvc02-pvc-14781067-3b87-4e5f-950b-4b30807057c5  index.html
 
 （4）如果磁盘损坏，则集群里的某个节点无法正常运行，集群功能受损
 
+**2、有状态服务-StatefulSet的应用场景：**
 
+- 稳定的部署次序：有序部署或扩展，需要根据定义的顺序依次进行（即从0到N-1，在下一个Pod运行之前，所有之前的Pod必须都是Running和Ready状态）。
+- 稳定的扩展次序：有序收缩或删除，需要根据定义的顺序依次进行（即从N-1到0，在下一个Pod运行之前，所有之前的Pod必须都是Running和Ready状态）。
+- 稳定的网络标志：Pod重新调度后其PodName和HostName不变。
+- 稳定的持久化存储：基于PVC，Pod重新调度后仍能访问到相同的持久化数据。
 
-**应用场景：**
-
-- 稳定的、唯一的网络标识：即pod重新调度后其PodName和HostName不变，基于Headless Service来实现的。
-- 稳定的、持久的存储：即每个pod的存储资源是不共享的，且pod重新调度后还是能访问到相同的持久化数据，基于pvc实现。
-- 有序的、优雅的部署和伸缩：即pod是有顺序的，在部署或者扩展的时候是根据定义的顺序依次依序部署的（即从0到N-1,在下一个Pod运行之前所有之前的pod必都是Running状态或者Ready状态），是基于init containers来实现的。
-- 有序的、优雅的删除和停止：在pod删除时是从最后一个依次往前删除，即从N-1到0。
-- 有序的、自动的滚动更新。
-
-从上面的应用场景可以发现，StatefulSet由以下几个部分组成：
+从上面的应用场景可以发现，**StatefulSet由以下几个部分组成：**
 
 - 用于定义网络标志（DNS domain）的Headless Service
 - 用于创建pvc的volumeClaimTemplates
@@ -1064,17 +1161,184 @@ StatefulSet中每个Pod的DNS格式为`statefulSetName-{0..N-1}.serviceName.name
 - `namespace`为服务所在的namespace，Headless Servic和StatefulSet必须在相同的namespace；
 - `.cluster.local`为Cluster Domain；
 
+**3、StatefulSet的特性：**
 
+- StatefulSet里的每个Pod都有稳定、唯一的网络标识，可以用来发现集群内的其他成员。假设StatefulSet的名称为kafka，那么第1 个Pod叫kafka-0，第2个叫kafka-1，以此类推。 
+- StatefulSet控制的Pod副本的启停顺序是受控的，操作第n个Pod时，前n-1个Pod已经是运行且准备好的状态。 
+- StatefulSet里的Pod采用稳定的持久化存储卷，通过PV或 PVC来实现，删除Pod时默认不会删除与StatefulSet相关的存储卷（为
 
+**4、部署StatefulSet服务**
 
+前提条件：系统中已经有可用的storageclasses，具体参考上一章节。
 
+```bash
+# kubectl get sc
+NAME   PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+web    fuseim.pri/ifs   Delete          Immediate           false                  19m
+```
 
+StatefulSet的使用方式：通过`volumeClaimTemplates`自动创建PVC及PV。
 
+（1）创建statefulset.yaml文件
 
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  serviceName: "nginx"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: nginx
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: nginx
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "web"
+      resources:
+        requests:
+          storage: 20Gi
+```
 
+**注意**： 1.`volumeClaimTemplates`：表示一类PVC的模板，系统会根据有状态服务-StatefulSet配置的replicas数量，创建相应数量的PVC。这些PVC除了名字不一样之外其他配置都是一样的。
 
+2.storageClassName值和storage大小，需要符合storageClass。名称不一样或者statefulset中的storage大于storageClass都会创建失败。
 
+（2）执行以下命令，部署StatefulSet服务：
 
+```
+kubectl create -f statefulset.yaml
+```
+
+（3）同时在另一个窗口中，执行以下命令，查看Pod按照次序部署：
+
+```bash
+# kubectl get pod -w -l app=nginx
+NAME    READY   STATUS    RESTARTS   AGE
+web-0   0/1     Pending       0          0s
+web-0   0/1     Pending       0          0s
+web-0   0/1     ContainerCreating   0          0s
+web-0   1/1     Running             0          3s
+web-1   0/1     Pending             0          0s
+web-1   0/1     Pending             0          0s
+web-1   0/1     ContainerCreating   0          0s
+web-1   1/1     Running             0          9s
+```
+
+（4）查看最后的结果：
+
+```bash
+# kubectl get pod,pv,pvc,sc
+NAME                                          READY   STATUS    RESTARTS   AGE
+pod/nfs-client-provisioner-7c79ffd999-lscvc   1/1     Running   0          32m
+pod/web-0                                     1/1     Running   0          119s
+pod/web-1                                     1/1     Running   0          116s
+
+NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                 STORAGECLASS   REASON   AGE
+persistentvolume/pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            Delete           Bound       default/nginx-web-0   web                     31m
+persistentvolume/pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            Delete           Bound       default/nginx-web-1   web                     30m
+persistentvolume/web-pv                                     20Gi       RWX            Retain           Available                         web                     30m
+
+NAME                                STATUS    VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/nfs-web-0     Pending                                                                                       4m20s
+persistentvolumeclaim/nginx-web-0   Bound     pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            web            43m
+persistentvolumeclaim/nginx-web-1   Bound     pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            web            30m
+
+NAME                              PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+storageclass.storage.k8s.io/web   fuseim.pri/ifs   Delete          Immediate           false                  31m
+```
+
+**5、伸缩StatefulSet服务**
+
+```bash
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+nfs-client-provisioner-7c79ffd999-lscvc   1/1     Running   0          37m
+web-0                                     1/1     Running   0          6m41s
+web-1                                     1/1     Running   0          6m38s
+# kubectl scale sts web --replicas=3
+statefulset.apps/web scaled
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+nfs-client-provisioner-7c79ffd999-lscvc   1/1     Running   0          37m
+web-0                                     1/1     Running   0          7m3s
+web-1                                     1/1     Running   0          7m
+web-2                                     1/1     Running   0          14s
+# kubectl scale sts web --replicas=2
+statefulset.apps/web scaled
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+nfs-client-provisioner-7c79ffd999-lscvc   1/1     Running   0          38m
+web-0                                     1/1     Running   0          7m31s
+web-1                                     1/1     Running   0          7m28s
+# kubectl get  pv,pvc
+NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                 STORAGECLASS   REASON   AGE
+persistentvolume/pvc-180ad7b3-8dbb-41aa-b464-eb1a48c848ca   20Gi       RWO            Delete           Bound       default/nginx-web-2   web                     7m36s
+persistentvolume/pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            Delete           Bound       default/nginx-web-0   web                     43m
+persistentvolume/pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            Delete           Bound       default/nginx-web-1   web                     41m
+persistentvolume/web-pv                                     20Gi       RWX            Retain           Available                         web                     42m
+
+NAME                                STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/nginx-web-0   Bound    pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            web            54m
+persistentvolumeclaim/nginx-web-1   Bound    pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            web            41m
+persistentvolumeclaim/nginx-web-2   Bound    pvc-180ad7b3-8dbb-41aa-b464-eb1a48c848ca   20Gi       RWO            web            7m37s
+
+```
+
+发现PVC和PV并没有随Pod一起缩减，扩容后新创建的Pod仍会使用原来的PVC和PV。
+
+**6、StatefulSet服务的持久化存储**
+
+```bash
+# kubectl exec web-1 -- ls /data
+# kubectl exec web-1 -- touch /data/test.log
+# kubectl exec web-1 -- ls /data
+test.log
+# kubectl delete pod web-1
+pod "web-1" deleted
+
+# kubectl exec web-1 -- ls /data
+test.log
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+nfs-client-provisioner-7c79ffd999-lscvc   1/1     Running   0          69m
+web-0                                     1/1     Running   0          38m
+web-1                                     1/1     Running   0          27s
+
+```
+
+发现删除pod后，系统会自动拉起一个pod，然后去关联之前pod使用的存储，而测试文件test.log并没有被删除。
 
 
 
@@ -1091,19 +1355,392 @@ https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
 
 
 
+# 12  Service
+
+**1、Service 出现的原因**
+
+Pod 中的容器很可能因为各种原因发生故障而死掉， Controller 会通过动态创建和销毁 Pod 来保证应用整体的健壮性。而由于每次新 Pod 都会分配到新的 IP 地址，为了能让客户端找到并访问这个服务，Kubernetes 给出了 Service 这个解决方案。
+
+Pod、RC与Service的逻辑关系：
+
+![image-20210427175822444](assets/image-20210427175822444.png)
+
+Kubernetes的Service定义了一个服务的访问入口地址，前端的应用（Pod）通过这个入口地址访问其背后的一组由Pod副本组成的集群实例，Service与其后端Pod副本集群之间则是通过Label Selector来实现无缝对接的。RC的作用实际上是保证 Service的服务能力和服务质量始终符合预期标准。
+
+
+
+**2、Service 介绍**
+
+Service是kubernetes中最核心的资源对象之一，`service和pod之间是通过Label串起来`，相同的Service的pod的Label是一样的。`同一个service下的所有pod是通过kube-proxy实现负载均衡。而每个service都会分配一个全局唯一的虚拟ip，也就cluster ip。`
+
+在该service整个生命周期内,cluster ip保持不变,而在kubernetes中还有一个dns服务,它会把service的name解析为cluster ip.
+
+Service 可以看作是一组提供相同服务的Pod对外的访问入口。借助Service，可以方便的实现服务发现和负载均衡。
+
+Service 默认只支持4层负载均衡能力，没有7层功能。（可以通过Ingress实现）
+
+**3、Service的负载均衡器kube-proxy**
+
+Kubernetes也遵循了上述常规做法,运行在每个Node上的kube-proxy进程其实就是一个智能的软件负载均衡器,它负责把对Service的请求转发到后端的某个Pod实例上,并在内部实现服务的负载均衡与会话保持机制。但Kubernetes发明了一种很巧妙又影响深远的设计: Service不是共用一个负载均衡器的IP地址,而是每个Service分配了一个全局唯一的虚拟IP地址,这个虚拟IP被称为Cluster IP,这样一来,每个服务就变成了具备唯一IP地址的“通信节点”,服务调用就变成了最基础的TCP网络通信问题.
+
+
+
+**4、Cluster IP**
+
+Kubernetes发明了一种很巧妙又影响深远的设计：Service没有共用一个负载均衡器的IP地址，每个Service都被分配了一个全局唯一的虚拟IP地址，这个虚拟IP被称为Cluster IP。这样一来，每个服务就变成了具备唯一IP地址的通信节点，服务调用就变成了最基础的TCP网络通信问题。 
+
+我们知道，Pod的Endpoint地址会随着Pod的销毁和重新创建而发生改变，因为新Pod的IP地址与之前旧Pod的不同。而Service一旦被创 建，Kubernetes就会自动为它分配一个可用的Cluster IP，而且在Service的整个生命周期内，它的Cluster IP不会发生改变。于是，服务发现这个棘手的问题在Kubernetes的架构里也得以轻松解决：只要用Service的Name与Service的Cluster IP地址做一个DNS域名映射即可完美解决问题。
+
+
+
+**5、Service的类型**
+
+- **ClusterIp：**提供一个集群内部的虚拟IP以供Pod访问（service默认类型)
+
+  k8s内部流量走向：内部客户端 --> service（ClussterIp:Port）--> endpoint --> 应用pod
+
+- **NodePort：**通过每个 Node 节点上的 IP 和静态端口（NodePort）暴露服务以供外部访问
+
+  NodePort类型的service数据流向：外部用户 --> 外部LB --> nodePort（集群入口）--> service --> endpoint --> 应用pod
+
+- **LoadBalancer：**在NodePort的基础上，借助Cloud Provider创建一个外部负载均衡器，并将请求转发到NodePort以供外部访问
+
+- **ExternalName：**用于实现集群内部pod访问集群外部的服务
+
+  数据流向：内部pod--service--外部服务
+  该类型的service没有serviceIP，没有nodeport，没有标签选择器，需要CNAME解析记录
+
+
+
+**5、Service的工作模式**
+
+**① userspace 代理模式**
+
+![image-20210428102432086](assets/image-20210428102432086.png)
+
+Client Pod要访问Server Pod时,它先将请求发给本机内核空间中的service规则，由它再将请求，转给监听在指定套接字上的kube-proxy，kube-proxy处理完请求，并分发请求到指定Server Pod后,再将请求递交给内核空间中的service,由service将请求转给指定的Server Pod。
+
+由于其需要来回在用户空间和内核空间交互通信，因此效率很差，接着就有了第二种方式。
+
+
+
+**② iptables 代理模式**
+
+![image-20210428102557068](assets/image-20210428102557068.png)
+
+客户端IP请求时，直接请求本地内核service ip，根据iptables的规则直接将请求转发到到各pod上，因为使用iptable NAT来完成转发，也存在不可忽视的性能损耗。另外，如果集群中存在上万的Service/Endpoint，那么Node上的iptables rules将会非常庞大，性能还会再打折扣。
+
+
+
+**③ ipvs 代理模式**
+
+![image-20210428104519524](assets/image-20210428104519524.png)
+
+ipvs代理模式中 kube-proxy会监视 Kubernetes Service对象和 Endpoints，调用 netlink接口以相应地创建 ipvs规则并定期与Kubernetes Service对象和 Endpoints对象同步 ipvs规则，以确保 ipvs状态与期望一致。访问服务时，流量将被重定向到其中一个后端 Pod。
+
+与 iptables类似， ipvs于 netfilter的 hook功能，但使用哈希表作为底层数据结构并在内核空间中工作。这意味着 ipvs可以更快地重定向流量，并且在同步代理规则时具有更好的性能。此外， ipvs为负载均衡算法提供了更多选项，例如：
+
+- rr：轮询调度
+- lc：最小连接数
+- dh：目标哈希
+- sh：源哈希
+- sed：最短期望延迟
+- nq：不排队调度
+
+**注意：**
+
+- 以上三种方式中，kube-proxy通过Watch方式监控kube-Apiserver写入etcd中的Pod信息，一旦Pod资源删除或新建，就会立即修改iptables或Ipvs中 避免出现Clinet Pod请求到Server Pod时找不到Server Pod的情况；
+- K8s 1.1版本以前默认为userspace 之后默认是ipvs 如果ipvs没有被激活，则降级使用iptables；
+- ipvs模式和iptables模式的区别仅仅是：请求流量的调度功能由ipvs完成，其他功能仍由iptables完成；
+- Service 是由 kube-proxy 组件，加上 iptables 来共同实现的；
+
+
+
+**6、Service服务发现机制**
+
+① 环境变量方式
+
+使用环境变量作为服务Service 发现的方式，使用起来很简单。
+Kubernetes 服务在我们创建Service时，就已经为我们创建好了相应的环境变量；示例如下：
+
+```bash
+REDIS_MASTER_SERVICE_PORT=6379
+REDIS_MASTER_SERVICE_HOST=10.254.150.249
+REDIS_MASTER_PORT_6379_TCP_PROTO=tcp
+REDIS_MASTER_PORT_6379_TCP_PORT=6379
+REDIS_MASTER_PORT_6379_TCP_ADDR=10.254.150.249
+REDIS_MASTER_PORT_6379_TCP=tcp://10.254.150.249:6379
+REDIS_MASTER_PORT=tcp://10.254.150.249:6379
+```
+
+我们只要在应用服务中引用这些环境变量就可以了。
+
+容器应用使用变量
+
+因为Kubernetes 服务提供了其他的服务发现方式，所以我们最好在Pod创建yaml文件中，设置一个用于制定服务发现方式的变量。示例如下：
+
+```bash
+env:
+  - name: GET_HOSTS_FROM
+    value: env
+```
+
+在Pod 应用程序中，我们可以通过GET_HOSTS_FROM 变量，来确定服务发现的方式。
+
+② DNS 服务方式
+
+考虑到通过环境变量获取Service地址的方式仍然不太方便、不够直观，后来Kubernetes通过Add-On增值包引入了DNS系统，把服务名 作为DNS域名，这样程序就可以直接使用服务名来建立通信连接了。目前，Kubernetes上的大部分应用都已经采用了DNS这种新兴的服务发现机制，后面会讲解如何部署DNS系统。 
 
 
 
 
 
+# 13 Job/CronJob
+
+**1、Job/CronJob介绍**
+
+批处理任务通常并行（或者串行）启动多个计算进程去处理一批工作项（work item），在处理完成后，整个批处理任务结束。
+
+Job: 负责批量处理短暂的一次性任务，仅执行一次，并保证处理的一个或者多个Pod成功结束。
+
+CronJob: 负责定时任务，在指定的时间周期运行指定的任务。
+
+**2、用途**
+
+容器按照持续运行的时间可分为两类：服务类容器和工作类容器
+
+服务类容器通常持续提供服务,需要一直运行,比如HTTPServer、Daemon等。工作类容器则是一次性任务,比如批处理程序,完成后容器就退出。
+
+Kubernetes的Deployment、ReplicaSet和DaemonSet都用于管理服务类容器；对于工作类容器，我们使用Job。
+
+K8S支持以下几种方式:
+
+- 非并行Job:
+
+  - 通常只运行一个Pod，Pod成功结束Job就退出。
+
+- 固定完成次数的并行Job:
+
+  - 并发运行指定数量的Pod，直到指定数量的Pod成功，Job结束。
+
+- 带有工作队列的并行Job:
+
+  - 用户可以指定并行的Pod数量，当任何Pod成功结束后，不会再创建新的Pod
+  - 一旦有一个Pod成功结束，并且所有的Pods都结束了，该Job就成功结束。
+  - 一旦有一个Pod成功结束，其他Pods都会准备退出。
+
+  
+
+**3、Job Spec**
+
+完整Job字段可以参考Job。Job有几个主要参数配合用于指定完成次数，并发运行，错误重试等操作:
+
+- .spec.completions: 指定job需要成功运行Pods的次数。默认值: 1
+- .spec.parallelism: 指定job在任一时刻应该并发运行Pods的数量。默认值: 1
+- .spec.activeDeadlineSeconds: 指定job可运行的时间期限，超过时间还未结束，系统将会尝试进行终止。
+- .spec.backoffLimit: 指定job失败后进行重试的次数。默认是6次，每次失败后重试会有延迟时间，该时间是指数级增长，最长时间是6min。
+
+> 已知问题 Issue #54870, .spec.template.spec.restartPolicy设置为”Onfailure”时，会与.spec.backoffLimit冲突，可以暂时将restartPolicy设置为”Never”进行规避。
+> 注1： .spec.activeDeadlineSeconds要比.spec.backoffLimit优先级高，如果时间到了，但是backoffLimit还未到，该Job也会被强制停止。
 
 
 
+**4、CronJob**
+
+CronJob即定时任务，就类似于Linux系统的crontab，在指定的时间周期运行指定的任务。在Kubernetes 1.5，使用CronJob需要开启batch/v2alpha1 API，即–runtime-config=batch/v2alpha1。
+
+CronJob Spec
+
+- .spec.schedule指定任务运行周期，格式同Cron
+- .spec.jobTemplate指定需要运行的任务，格式同 Job
+- .spec.startingDeadlineSeconds指定任务开始的截止期限
+- .spec.concurrencyPolicy指定任务的并发策略，支持Allow、Forbid和Replace三个选项
 
 
 
+# 14 Namespace
+
+Namespace（命名空间）是Kubernetes系统中的另一个非常重要的概念，Namespace在很多情况下用于实现多租户的资源隔离。
+
+Namespace通过将集群内部的资源对象“分配”到不同的Namespace中，形成逻辑上分组的不同项目、小组或用户组，便于不同的分组在 共享使用整个集群的资源的同时还能被分别管理。 
+
+Kubernetes集群在启动后会创建一个名为default的Namespace，常见的pods, services, replication controllers和deployments等都是属于某一个namespace的（默认是default），而node, persistentVolumes等则不属于任何namespace。
+
+Namespace操作：
+
+```bash
+# 查询
+$ kubectl get ns
+NAME                   STATUS   AGE
+default                Active   21d
+kube-node-lease        Active   21d
+kube-public            Active   21d
+kube-system            Active   21d
+kubernetes-dashboard   Active   20d
+monitoring             Active   20d
+$ kubectl get namespaces
+NAME                   STATUS   AGE
+default                Active   21d
+kube-node-lease        Active   21d
+kube-public            Active   21d
+kube-system            Active   21d
+kubernetes-dashboard   Active   20d
+monitoring             Active   20d
+
+
+# 注意：namespace包含两种状态”Active”和”Terminating”。在namespace删除过程中，namespace状态被设置成”Terminating”。
+
+# 创建
+(1) 命令行直接创建
+$ kubectl create namespace new-namespace
+
+(2) 通过文件创建
+$ cat my-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: new-namespace
+
+$ kubectl create -f ./my-namespace.yaml
+# 注意：命名空间名称满足正则表达式[a-z0-9]([-a-z0-9]*[a-z0-9])?,最大长度为63位
+
+
+# 删除
+$ kubectl delete namespaces new-namespace
+# 注意：删除一个namespace会自动删除所有属于该namespace的资源。default和kube-system命名空间不可删除。
+```
 
 
 
+# 15 Annotation
 
+Annotation（注解）与Label类似，也使用key/value键值对的形式进行定义。不同的是Label具有严格的命名规则，它定义的是 Kubernetes对象的元数据（Metadata），并且用于Label Selector。 Annotation则是用户任意定义的附加信息，以便于外部工具查找。在很多时候，Kubernetes的模块自身会通过Annotation标记资源对象的一些特殊信息。 
+
+通常来说，用Annotation来记录的信息如下。 
+
+- build信息、release信息、Docker镜像信息等，例如时间戳、 release id号、PR号、镜像Hash值、Docker Registry地址等。 
+- 日志库、监控库、分析库等资源库的地址信息。 
+- 程序调试工具信息，例如工具名称、版本号等。 
+- 团队的联系信息，例如电话号码、负责人名称、网址等。
+
+
+
+# 16 ConfigMap
+
+**1、ConfigMap介绍**
+
+ConfigMap顾名思义，是用于保存配置数据的键值对，可以用来保存单个属性，也可以保存配置文件。Secret可以为Pod提供密码、Token、私钥等敏感数据；对于一些非敏感数据，比如应用的配置信息，则可以使用ConfigMap。
+
+> ConfigMap的创建和使用方式与Secret非常类似，主要的不同是以明文的形式存放。
+
+主要用来应对以下场景：
+
+- 使用k8s部署应用，当你将应用配置写进代码中，就会存在一个问题，更新配置时也需要打包镜像，configmap可以将配置信息和docker镜像解耦。
+- 使用微服务架构的话，存在多个服务共用配置的情况，如果每个服务中单独一份配置的话，那么更新配置就很麻烦，使用configmap可以友好的进行配置共享。
+
+
+
+**2、ConfigMap创建**
+
+可以使用 `kubectl create configmap` 从文件、目录或者 key-value 字符串创建等创建 ConfigMap。也可以通过 `kubectl create -f`从描述文件创建。
+
+**（1）通过yaml / json文件创建（推荐）**
+
+这种是我比较推荐的方式，创建configmap.yaml:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: test-conf
+  namespace: test
+data:
+  test-conf: |+
+    SESSION_LIFETIME: 3600
+    URL: "http://test-server:8080"
+```
+
+执行命令：
+
+```bash
+kubectl create -f configmap.yaml
+```
+
+若报错："namespace 'test' not found"，则需要先创建namespace：
+
+```sh
+kubectl create namespace test
+```
+
+**（2）通过--from-file**
+
+分别指定单个文件和目录，指定目录可以创建一个包含该目录中所有文件的configmap：
+
+```sh
+kubectl create configmap *** --from-file=/path
+```
+
+将--from-file指定为单个文件就可以从单个文件中创建：
+
+```bash
+kubectl create configmap *** --from-file=file1
+```
+
+其中，--from-file可以使用多次，比如：
+
+```bash
+kubectl create configmap *** --from-file=file1 --from-file=file2
+```
+
+**（3）通过key-value字符串创建**
+
+```bash
+kubectl create configmap *** --from-literal=config1=123 --from-literal=config2=234
+```
+
+**（4）通过env文件创建**
+
+通过环境文件创建：
+
+```bash
+kubectl create configmap *** --from-env-file=env.txt
+```
+
+其中，env.txt的文件格式为:
+
+```text
+config1=***
+config2=***
+```
+
+当使用多个--from-env-file从多个数据源创建configmap时，仅最后一个env文件有效。
+
+
+
+**3、ConfigMap的使用**
+
+Pod可以通过三种方式来使用ConfigMap，分别为：
+
+- 将ConfigMap中的数据设置为环境变量
+- 将ConfigMap中的数据设置为命令行参数
+- 使用Volume将ConfigMap作为文件或目录挂载
+
+**注意：使用ConfigMap有以下几个限制条件：**
+
+- ConfigMap必须在Pod使用它之前创建
+- 使用envFrom时，将会自动忽略无效的键
+- Pod只能使用同一个命名空间的ConfigMap
+
+
+
+**4、查看**
+
+可以使用以下命令查看创建成功的configmap:
+
+| 命令                                      | 说明                                   |
+| ----------------------------------------- | -------------------------------------- |
+| kubectl get configmaps                    | 查看所有configmaps                     |
+| kubectl get configmaps -n namespace1      | 查看namespace1空间的所有configmap      |
+| kubectl get configmaps configmap1         | 查看configmap1的详细信息               |
+| kubectl get configmaps configmap1 -o yaml | 以yaml文件形式展示configmap1的详细信息 |
 
