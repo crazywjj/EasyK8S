@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: glusterfs-cluster
+  namespace: default
+spec:
+  ports:
+  - port: 49152
+    protocol: TCP
+    targetPort: 49152
+  sessionAffinity: None

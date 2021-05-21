@@ -1,0 +1,65 @@
+{
+    "clusters": [
+        {
+            "nodes": [
+                {
+                    "node": {
+                        "hostnames": {
+                            "manage": [
+                                "k8s-master40"
+                            ],
+                            "storage": [
+                                "10.159.238.40"
+                            ]
+                        },
+                        "zone": 1
+                    },
+                    "devices": [
+                        {
+                            "name": "/dev/vdb",
+                            "destroydata": false
+                        }
+                    ]
+                },
+                {
+                    "node": {
+                        "hostnames": {
+                            "manage": [
+                                "k8s-node41"
+                            ],
+                            "storage": [
+                                "10.159.238.41"
+                            ]
+                        },
+                        "zone": 2
+                    },
+                    "devices": [
+                        {
+                            "name": "/dev/vdb",
+                            "destroydata": false
+                        }
+                    ]
+                },
+                {
+                    "node": {
+                        "hostnames": {
+                            "manage": [
+                                "k8s-node42"
+                            ],
+                            "storage": [
+                                "10.159.238.42"
+                            ]
+                        },
+                        "zone": 3
+                    },
+                    "devices": [
+                        {
+                            "name": "/dev/vdb",
+                            "destroydata": false
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

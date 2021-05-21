@@ -1,0 +1,36 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test-pod
+spec:
+  containers:
+  - name: test-pod
+    image: busybox:1.24
+    command:
+      - "/bin/sh"
+    args:
+      - "-c"
+      - "touch /mnt/SUCCESS && exit 0 || exit 1"   #创建一个SUCCESS文件后退出
+    volumeMounts:
+      - name: www
+        mountPath: "/mnt"
+  restartPolicy: "Never"
+  volumes:
+    - name: www
+      persistentVolumeClaim:
+        claimName: gluster-pvc01  #与PVC名称保持一致
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: gluster-pvc01
+  namespace: default
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "glusterfs"
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  storageClassName: "glusterfs"
+  resources:
+    requests:
+      storage: 1Gi
+

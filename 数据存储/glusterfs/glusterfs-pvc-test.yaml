@@ -1,0 +1,12 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: gluster1
+  annotations:
+    volume.beta.kubernetes.io/storage-class: glusterfs    #----------上面创建的存储类的名称
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
