@@ -26,9 +26,7 @@ Pod运行于节点Node环境中，节点可以是物理机或者云或者虚拟�
 
 # 2 Pod、容器和Node之间的关系
 
-![pod和node关系](assets/pod%E5%92%8Cnode%E5%85%B3%E7%B3%BB.jpg)
-
-
+![pod-node](assets/pod-node.jpg)
 
 **Pod中可以共享两种资源：网络和存储**
 网络：
@@ -202,9 +200,7 @@ kubelet 周期地从`–manifest-url=`参数指定的地址下载文件，并且
 
 同一个Pod中的多个容器能够共享Pod级别的存储卷Volume。Volume可以被定义为各种类型，多个容器各自进行挂载操作，将一个Volume挂载为容器内部需要的目录，如图所示。
 
-![image-20210420160339641](assets/image-20210420160339641.png)
-
-
+![image-20210420160339641](assets/image-20210420160339641-1621822235485.png)
 
 在下面的例子中，在Pod内包含两个容器：tomcat和busybox，在Pod级别设置Volume“app-logs”，用于tomcat向其中写日志文件，busybox读日志文件。
 
@@ -257,11 +253,11 @@ Pod在整个生命周期中被系统定义为各种状态，熟悉Pod的各种�
 
 下图是Pod的生命周期示意图，从图中可以看到Pod状态的变化。
 
-![pod生命周期](assets/pod%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png)
+![pod-lifecycle](assets/pod-lifecycle.png)
 
 ## 6.2 Pod的创建过程
 
-![img](assets/1465170-20190403102521028-1937176408.png)
+![1465170-20190403102521028-1937176408](assets/1465170-20190403102521028-1937176408-1621821653903.png)
 
 Pod是Kubernetes的基础单元，了解其创建的过程，更有助于理解系统的运作。
 
@@ -556,6 +552,8 @@ pod控制器有多种类型：
 - Job：一次性任务运行，完成就立即退出，不需要重启或重建。
 - Cronjob：周期性任务控制，执行后就退出，不需要持续后台运行。
 - StatefulSet：管理有状态应用,比如redis,mysql。
+
+
 
 
 

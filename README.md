@@ -18,35 +18,31 @@
 
 <table border="0">
 <tr>
-   <td><a href="概念介绍/kubernetes介绍.md">01-kubernetes介绍</a></td>
+   <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td>
 </tr>
 </table>
-
 
 
 
 # 二 安装部署
 
-主要介绍以kubeadm、二进制方式安装部署。
+主要介绍以kubeadm方式部署单主和多主高可用方式、k8s版本升级。
 
 <table border="0">
 <tr>
-   <td><a href="安装部署/kubeadm部署--单主集群.md">01-kubeadm部署--单主集群</a></td>
-   <td><a href="安装部署/kubeadm部署--多主集群.md">02-kubeadm部署--多主集群</a></td>
-   <td><a href="安装部署/kubectl命令行工具详解.md">03-kubectl命令行工具详解</a></td>
-   <td><a href="安装部署/kubernetes版本升级.md">04-kubernetes版本升级</a></td>
+   <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td>
+   <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td>
+   <td><a href="安装部署/kubectl命令行工具详解.md">kubectl命令行工具详解</a></td>
+   <td><a href="安装部署/kubernetes版本升级.md">kubernetes版本升级</a></td>
 </tr>
 </table>
-
-
-
 
 
 
 
 # 三 数据存储
 
-Kubernetes对于有状态的容器应用或者对数据需要持久化的应用，不仅需要将容器内的目录挂载到宿主机的目录或者emptyDir临时存储卷，而且需要更加可靠的存储来保存应用产生的重要数据，以便容器应用在重建之后仍然可以使用之前的数据。
+Kubernetes对于**有状态的容器应用或者对数据需要持久化的应用**，不仅需要将容器内的目录挂载到宿主机的目录或者emptyDir临时存储卷，而且需要更加可靠的存储来保存应用产生的重要数据，以便容器应用在重建之后仍然可以使用之前的数据。
 
 <table border="0">
 <tr>
@@ -58,6 +54,21 @@ Kubernetes对于有状态的容器应用或者对数据需要持久化的应用�
 </table>
 
 
+# 四 Pod与控制器
+
+Pod是Kubernetes创建或部署的**最小/最简单的基本单位**，一个Pod代表集群上正在运行的一个进程。
+
+Pod控制器是**用于实现管理pod的中间层**，确保pod资源符合预期的状态，pod的资源出现故障时，会尝试进行重启，当根据重启策略无效，则会重新新建pod的资源。
+
+
+
+<table border="0">
+<tr>
+   <td><a href="Pod与控制器/Pod介绍.md">Pod介绍</a></td>
+   <td><a href="Pod与控制器/Pod状态与生命周期.md">Pod状态与生命周期</a></td>
+   <td><a href="Pod与控制器/Pod资源调度.md">Pod资源调度</a></td>
+</tr>
+</table>
 
 
 
@@ -94,14 +105,6 @@ kubectl 可以通过配置文件来创建这些 “对象”，配置文件更�
 
 
 
-
-# 四 Pod与控制器
-
-<table border="0">
-<tr>
-   <td><a href="Kubernetes学习/第6章 深入掌握Pod.md">第6章 深入掌握Pod</a></td>
-</tr>
-</table>
 
 
 
