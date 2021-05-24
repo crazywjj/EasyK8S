@@ -117,7 +117,7 @@ k8s-master40  k8s-node41  k8s-node42
 
 ## 3.1 创建GlusterFS的endpoints
 
-vim   [glusterfs-endpoints.yaml](glusterfs\glusterfs-endpoints.yaml) 
+vim   [glusterfs-endpoints.yaml](yaml\glusterfs-endpoints.yaml) 
 
 ```yaml
 apiVersion: v1
@@ -137,7 +137,7 @@ subsets:
 
 ## 3.2 创建GlusterFS的service
 
-vim   [glusterfs-service.yaml](glusterfs\glusterfs-service.yaml) 
+vim  [glusterfs-service.yaml](yaml\glusterfs-service.yaml) 
 
 ```yaml
 apiVersion: v1
@@ -155,7 +155,7 @@ spec:
 
 ## 3.3 创建GlusterFS的PV
 
-vim   [glusterfs-pv.yaml](glusterfs\glusterfs-pv.yaml) 
+vim   [glusterfs-pv.yaml](yaml\glusterfs-pv.yaml) 
 
 ```yaml
 apiVersion: v1
@@ -180,7 +180,7 @@ spec:
 
 ## 3.4 创建GlusterFS的PVC
 
-vim  [glusterfs-pvc.yaml](assets\glusterfs-pvc.yaml) 
+vim   [glusterfs-pvc.yaml](yaml\glusterfs-pvc.yaml) 
 
 ```yaml
 apiVersion: v1
@@ -230,7 +230,7 @@ glusterfs-cluster-pvc   Bound    glusterfs-cluster-pv                       10Gi
 
 ## 3.5 创建应用使用GlusterFS卷
 
-vim   [nginx-glusterfs.yaml](glusterfs\nginx-glusterfs.yaml) 
+vim [nginx-glusterfs.yaml](yaml\nginx-glusterfs.yaml) 
 
 ```yaml
 apiVersion: apps/v1
@@ -316,7 +316,7 @@ for i in ${IPlist[*]};do sshpass -p "123456" ssh-copy-id -i /etc/heketi/heketi_k
 
 heketi有三种executor，分别为mock，ssh，kubernetes，建议在测试环境使用mock，生成环境使用ssh，当glusterfs以容器的方式部署在Kubernetes上时，才是用kubernetes。
 
-`vim /etc/heketi/heketi.json` 
+vim /etc/heketi/[heketi.json](yaml\heketi.json) 
 
 ```json
 {
@@ -392,7 +392,7 @@ Hello from Heketin
 
 Heketi要求在一个GlusterFS集群中至少有3个节点。在topology.json配置文件hostnames字段的manage上填写主机名，在storage上填写IP地址，devices要求为未创建文件系统的裸设备（可以有多块盘），以供Heketi自动完成PV（Physical Volume）、VG（Volume Group）和LV（Logical Volume）的创建。
 
-`vim /etc/heketi/topology.json`
+vim /etc/heketi/[topology.json](yaml\topology.json) 
 
 ```json
 {
@@ -559,7 +559,7 @@ Id:011f36f3475e624ee3fe835a89b51ff9    Cluster:7fa39054f091b3f4f3980170f78658eb 
 
 ## 4.2 创建storageclass
 
-vim  [glusterfs-storageclass.yaml](glusterfs\glusterfs-storageclass.yaml) 
+vim  [glusterfs-storageclass.yaml](yaml\glusterfs-storageclass.yaml) 
 
 ```yaml
 apiVersion: v1
@@ -631,7 +631,7 @@ secret/heketi-secret         kubernetes.io/glusterfs               1      35m
 
 ## 4.3 创建pod测试
 
-vim  [test-glusterfs-heketi.yaml](glusterfs\test-glusterfs-heketi.yaml) 
+vim  [test-glusterfs-heketi.yaml](yaml\test-glusterfs-heketi.yaml) 
 
 ```yaml
 kind: Pod
@@ -751,7 +751,7 @@ wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/to
 
 ### 5.2.1 部署GlusterFS服务
 
-GlusterFS管理服务容器以DaemonSet的方式进行部署，确保在每个Node上都运行一个GlusterFS管理服务。glusterfs-daemonset.json的内容如下：
+GlusterFS管理服务容器以DaemonSet的方式进行部署，确保在每个Node上都运行一个GlusterFS管理服务。 [glusterfs-daemonset.json](yaml\glusterfs-daemonset.json) 的内容如下：
 
 ```json
 {
@@ -969,8 +969,9 @@ $ /usr/sbin/glusterd -f /etc/glusterfs/glusterd.vol  -p /var/run/glusterd.pid --
 
 1）在部署Heketi服务之前，需要为它创建一个ServiceAccount对象：
 
+cat  [heketi-service-account.json](yaml\heketi-service-account.json) 
+
 ```bash
-$ cat heketi-service-account.json
 {
   "apiVersion": "v1",
   "kind": "ServiceAccount",
@@ -1060,8 +1061,11 @@ export HEKETI_CLI_SERVER=http://localhost:18080
 
 确保hostnames/manage指向下面显示的确切名称kubectl get nodes，并且hostnames/storage是存储网络的IP地址。
 
+cat  [topology-sample.json](yaml\topology-sample.json) 
+
 ```json
-vim topology-sample.json
+
+
 {
   "clusters": [
     {
@@ -1163,7 +1167,7 @@ $ file -s /dev/vdb
 
 - 使用Heketi为它配置一个卷来存储其数据库
 
-执行此命令后会生成一个heketi-storage.json的文件：
+执行此命令后会生成一个  [heketi-storage.json](yaml\heketi-storage.json)  的文件：
 
 ```
 $ heketi-cli setup-openshift-heketi-storage
@@ -1198,7 +1202,7 @@ $ kubectl delete all,service,jobs,deployment,secret --selector="deploy-heketi"
 
 - 创建Heketi的deployment应用
 
-修改heketi-deployment.json中镜像`"image": "heketi/heketi:dev"`为`"image": "heketi/heketi:9"`。
+修改  [heketi-deployment.json](yaml\heketi-deployment.json)  中镜像`"image": "heketi/heketi:dev"`为`"image": "heketi/heketi:9"`。
 
 ```bash
 $ kubectl create -f heketi-deployment.json
@@ -1226,7 +1230,7 @@ Id:aea9ecf91cc200322b66065224bf6cab    Cluster:3b850cd53686c198af9de42e3a378e21 
 
 ### 5.2.3 定义StorageClass
 
-vim storageclass-gluster-heketi.yaml
+vim  [storageclass-gluster-heketi.yaml](yaml\storageclass-gluster-heketi.yaml) 
 
 ```
 apiVersion: storage.k8s.io/v1
@@ -1262,7 +1266,7 @@ glusterfs-heketi (default)   kubernetes.io/glusterfs   Delete          Immediate
 
 ### 5.2.4 创建nginx-deployment测试
 
-vim  [nginx-deployment.yaml](glusterfs\nginx-deployment.yaml) 
+vim  [nginx-deployment.yaml](yaml\nginx-deployment.yaml) 
 
 ```bash
 apiVersion: apps/v1

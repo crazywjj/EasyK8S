@@ -170,7 +170,7 @@ PersistentVolumeClaim 字段描述如下所示：
 
 ## 3.4 创建 PV 文件
 
- [nfs-pv.yaml](pv和pvc\nfs-pv.yaml) 
+vim [nfs-pv.yaml](yaml\nfs-pv.yaml) 
 
 ```yml
 apiVersion: v1
@@ -206,7 +206,7 @@ nfs    5Gi        RWX            Retain           Available           manual    
 
 PV 是存储资源，而 PVC 是对 PV 的请求。PVC 跟 Pod 类似：Pod 消费 Node 资源，而 PVC 消费 PV 资源；Pod 能够请求 CPU 和内存资源，而 PVC 请求特定大小和访问模式的数据卷。
 
- [nfs-pvc.yaml](pv和pvc\nfs-pvc.yaml) 
+vim [nfs-pvc.yaml](yaml\nfs-pvc.yaml) 
 
 ```yml
 apiVersion: v1
@@ -243,7 +243,7 @@ PVC与PV绑定时会根据storageClassName（存储类名称）和accessModes（
 
 PVC使用方式和hostpath类似
 
- [web-front.yaml](pv和pvc\web-front.yaml) 
+vim [web-front.yaml](yaml\web-front.yaml) 
 
 ```yml
 apiVersion: v1

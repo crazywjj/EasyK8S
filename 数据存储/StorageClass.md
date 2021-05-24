@@ -185,7 +185,7 @@ Export PATH: /data
 
 （1）创建一个NFS类型的StorageClass，首先需要创建 nfs-client-provisioner（存储插件）：nfs-client 的自动配置程序
 
- [nfs-client-provisioner.yaml](storageclass\nfs-client-provisioner.yaml) 
+ vim [nfs-client-provisioner.yaml](yaml\nfs-client-provisioner.yaml) 
 
 ```yml
 apiVersion: apps/v1
@@ -232,7 +232,7 @@ spec:
 
 给nfs-client绑定相应的集群操作权限。
 
-[nfs-client-sa.yaml](storageclass\nfs-client-sa.yaml) 
+vim [nfs-client-sa.yaml](yaml\nfs-client-sa.yaml) 
 
 ```yml
 apiVersion: v1
@@ -281,7 +281,7 @@ roleRef:
 
 ## 4.4 创建 StorageClass
 
- [nfs-storageclass.yaml](storageclass\nfs-storageclass.yaml) 
+vim [nfs-storageclass.yaml](yaml\nfs-storageclass.yaml) 
 
 ```yml
 apiVersion: storage.k8s.io/v1
@@ -313,7 +313,7 @@ StorageClass创建完成后，开发人员只需要在 PVC 里指定要使用的
 
 ## 4.5 创建 PVC 请求文件
 
- [nfs-pvc02.yaml](storageclass\nfs-pvc02.yaml) 
+vim  [nfs-pvc02.yaml](yaml\nfs-pvc02.yaml) 
 
 ```yml
 apiVersion: v1
@@ -359,7 +359,7 @@ default-nfs-pvc02-pvc-14781067-3b87-4e5f-950b-4b30807057c5
 
 ## 4.6 创建Pod进行挂载测试
 
- [test-pod.yaml](storageclass\test-pod.yaml) 
+vim  [test-pod.yaml](yaml\test-pod.yaml) 
 
 ```yml
 kind: Pod
