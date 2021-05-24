@@ -22,6 +22,24 @@ Pod中运行容器Container。为建立Service与Pod间的关联关系，首先�
 
 Pod运行于Node环境中，节点可以是物理机或者云或者虚拟机。通常一个节点上运行几百个Pod，每个Pod里运行一个特殊的容器Pause，其他容器则为业务容器，业务容器共享Pause容器的网络栈和Volume挂载卷。
 
+一个打印"Hello World"的Pod示例：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-example
+spec:
+  containers:
+  - name: ubuntu
+    image: ubuntu:trusty
+    command: ["echo"]
+    args: ["Hello World"]
+
+```
+
+
+
 
 
 # 2 Pod组成
@@ -111,7 +129,15 @@ spec:
 
 > 在生产环境中，推荐使用诸如Deployment，StatefulSet，Job或者CronJob等控制器来创建Pod，而不是直接创建。
 
-将上述pod描述文件保存为nginx-pod.yaml，**使用kubectl apply命令运行pod**
+Pod管理常用命令：
+
+- 创建pod资源： kubectl create -f pod.yaml 
+- 查看pods： kubectl get pods pod-test 
+- 查看pod描述： kubectl describe pod pod-test 
+- 替换资源： kubectl replace -f pod.yaml -force 
+- 删除资源 ：kubectl delete pod pod-test
+
+将上述pod描述文件保存为nginx-pod.yaml，使用kubectl apply命令运行pod：
 
 ```css
 # kubectl apply -f nginx-pod.yaml
@@ -272,10 +298,6 @@ spec:         　　　　　　　            #必选，Pod中容器的详细�
 
 
 
-
-
-
-
 # 4 Pod类型
 
 Pod其实有两种类型：**普通的Pod**和**静态Pod（Static Pod）**。
@@ -376,9 +398,10 @@ Pending状态，这个状态意味着，Pod 的 YAML 文件已经提交给 Kuber
 可能原因：
 
 - 资源不足（集群内所有的 Node 都不满足该 Pod 请求的 CPU、内存、GPU 等资源）；
+
 - HostPort 已被占用（通常推荐使用 Service 对外开放服务端口）。
 
-
+  
 
 **2）Pod 一直处于 `Waiting` 或 `ContainerCreating` 状态**
 
