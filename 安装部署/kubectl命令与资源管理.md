@@ -8,7 +8,7 @@
 
 
 
-# kubectl命令行工具详解
+# kubectl命令与资源管理
 
 kubectl是Kubernetes集群的命令行工具，通过kubectl能够对集群本身进行管理，并能够在集群上进行容器化应用的安装部署。运行kubectl命令的语法如下所示：
 
