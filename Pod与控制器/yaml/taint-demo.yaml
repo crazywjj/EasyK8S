@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taint
+  labels:
+    app: taint
+spec:
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: taint
+  template:
+    metadata:
+      labels:
+        name: taint
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - name: http
+          containerPort: 80
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "web"
+        effect: "NoSchedule"

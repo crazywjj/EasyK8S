@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-deploy-with-node-affinity
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 60
+            preference:
+              matchExpressions:
+              - {key: zone, operator: In, values: ["foo"]}
+          - weight: 30
+            preference:
+              matchExpressions:
+              - {key: ssd, operator: Exists, values: []}
+      containers:
+      - name: nginx
+        image: nginx
+
