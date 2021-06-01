@@ -1,0 +1,187 @@
+[TOC]
+
+
+
+# Pod资源管理与QoS
+
+当你定义 Pod 时可以选择性地为每个容器设定所需要的资源数量。 最常见的可设定资源是 CPU 和内存（RAM）大小；此外还有其他类型的资源。
+
+目前来说，资源隔离尚且属于容器级别， CPU 和内存资源的配置需要在 Pod 中的容器上进行，每种资源均可由“ requests ”属性定义其请求的确保可用值，即容器运行可能用不到这么大的资源，但用到时必须要确保有如此多的资源可用，而“ limits ”属性则用于限制资源可用的最大值，即硬限制。
+
+Kubernetes根据资源能否伸缩进行分类，划分为可压缩资源和不可以压缩资源。CPU资源是目前支持的一种可压缩资源，而内存资源和磁盘资源为目前所支持的不可压缩资源。
+
+
+
+# 1 资源需求（Requests）和限制（ Limits）
+
+官方文档：https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+
+Pod 中的资源管理也主要是针对 cpu 和 内存。提供了 requests 和 limits 两个设置。具体的含义为：
+
+**Request:** 容器使用的最小资源需求，作为容器schedule阶段时资源分配的判断依赖。只有当节点上可分配资源量>=容器资源请求数时才允许将容器调度到该节点。但Request参数不限制容器的最大可使用资源。
+
+```
+spec.containers[].resources.requests.cpu
+spec.containers[].resources.requests.memory
+```
+
+**Limits:** 容器能使用资源的资源的最大值，超过这个 limits, pod 会被 kill 掉。设置为0表示使用资源无上限。
+
+```
+spec.containers[].resources.limits.cpu
+spec.containers[].resources.limits.memory
+```
+
+Kubernetes 系统上， 1个单位的 CPU 相当于虚拟机上的 1 颗虚拟 CPU ( vCPU ）或物理机上的一个超线程（ Hyperthread ，或称为一个逻辑 CPU ），它支持分数计量方式：
+
+- memory单位可以写为： M或者Mi,1M=1000kb,1Mi=1024kb
+- cpu单位可以写为：m或者数字，(1000m=1核CPU)，(500m=0.5CPU)，(250m=0.25CPU)
+
+Request能够保证Pod有足够的资源来运行，而Limit则是防止某个Pod无限制地使用资源，导致其他Pod崩溃。两者之间必须满足关系: 0<=Request<=Limit<=Infinity (如果Limit为0表示不对资源进行限制，这时可以小于Request)
+
+对于CPU，如果pod中服务使用CPU超过设置的limits，pod不会被kill掉但会被限制。如果没有设置limits，pod可以使用全部空闲的cpu资源。
+
+对于内存，当一个pod使用内存超过了设置的limits，pod中container的进程会被kernel因OOM kill掉。当container因为OOM被kill掉时，系统倾向于在其原所在的机器上重启该container或本机或其他重新创建一个pod。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 2 QoS分类
+
+Kubelet提供QoS服务质量管理，支持系统级别的OOM控制。在Kubernetes中，pod的QoS级别包括：*Guaranteed*, *Burstable*与 *Best-Effort*。
+
+3种QoS优先级从有低到高（从左向右）：
+
+Best-Effort pods -> Burstable pods -> Guaranteed pods
+
+
+
+下面对各级别分别进行相应说明：
+
+## 2.1 Guaranteed
+
+pod中的所有容器都必须对cpu和memory同时设置*limits*，如果有一个容器要设置*requests*，那么所有容器都要设置，并设置参数同*limits*一致，那么这个pod的QoS就是*Guaranteed*级别。
+
+注：如果一个容器只指明*limit*而未设定*request*，则*request*的值等于*limit*值。
+
+Guaranteed举例1：容器只指明了*limits*而未指明*requests*。
+
+```
+containers:
+name: foo
+resources:
+  limits:
+    cpu: 10m
+    memory: 1Gi
+name: bar
+resources:
+  limits:
+    cpu: 100m
+    memory: 100Mi
+```
+
+Guaranteed举例2：*requests*与*limit*均指定且值相等。
+
+```
+containers:
+name: foo
+resources:
+  limits:
+    cpu: 10m
+    memory: 1Gi
+  requests:
+    cpu: 10m
+    memory: 1Gi
+
+name: bar
+resources:
+  limits:
+    cpu: 100m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+```
+
+## 2.2 Burstable
+
+pod中只要有一个容器的*requests*和*limits*的设置不相同，该pod的QoS即为*Burstable*。举例如下：
+
+Container bar没有指定*resources*
+
+```
+containers:
+name: foo
+resources:
+  limits:
+    cpu: 10m
+    memory: 1Gi
+  requests:
+    cpu: 10m
+    memory: 1Gi
+name: bar
+```
+
+*Burstable*举例2：pod中只要有一个容器没有对cpu或者memory中的request和limits都没有明确指定。
+
+```
+containers:
+name: foo
+resources:
+  limits:
+    memory: 1Gi
+name: bar
+resources:
+  limits:
+    cpu: 100m
+```
+
+*Burstable*举例3：Container foo没有设置*limits*，而bar *requests*与 *limits*均未设置。
+
+```
+containers:
+name: foo
+resources:
+  requests:
+    cpu: 10m
+    memory: 1Gi  
+name: bar
+```
+
+## 2.3 Best-Effort
+
+如果对于全部的resources来说*requests*与*limits*均未设置，该pod的QoS即为*Best-Effort*。举例如下
+
+```
+containers:
+name: foo
+  resources:
+name: bar
+  resources:
+```
+
+
+
