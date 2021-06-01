@@ -57,7 +57,7 @@
 
 # 四 Pod与控制器
 
-主要包含Pod概念、Pod的创建、重启、终止过程；livenessProbe、readinessProbe探针、Node软硬亲和性、Pod软硬亲和性；taints污点、tolerations容忍度
+主要包含Pod概念、Pod的创建、重启、终止过程；livenessProbe、readinessProbe存活和就绪探针、Node、Pod软硬亲和性；taints污点、tolerations容忍度
 
 <table border="0">
 <tr>
@@ -143,15 +143,16 @@
 
 <table border="0">
     <tr>
-        <td><a href="二进制/01-Kubernets高可用集群.md">01-Kubernets 高可用集群</a></td>
-        <td><a href="二进制/02-Kubernetes集群插件.md">02-Kubernetes 集群插件</a></td>
+        <td><a href="附录/01-Kubernets高可用集群.md">01-Kubernets 高可用集群</a></td>
+        <td><a href="附录/02-Kubernetes集群插件.md">02-Kubernetes 集群插件</a></td>
     </tr>
 </table>
 <table border="0">
     <tr>
-    <td><a href="二进制/promethues/prometheus+grafana监控部署实践.md">prometheus+grafana 监控部署实践</a></td>
-    <td><a href="二进制/promethues/prometheus查询语法.md">prometheus 查询语法</a></td>
-    <td><a href="二进制/promethues/prometheus告警规则.md">prometheus 告警规则</a></td>
-    <td><a href="二进制/promethues/prometheus浅析.md">prometheus 浅析</a></td>
+    <td><a href="附录/promethues/prometheus+grafana监控部署实践.md">prometheus+grafana 监控部署实践</a></td>
+    <td><a href="附录/promethues/prometheus查询语法.md">prometheus 查询语法</a></td>
+    <td><a href="附录/promethues/prometheus告警规则.md">prometheus 告警规则</a></td>
+    <td><a href="附录/promethues/prometheus浅析.md">prometheus 浅析</a></td>
     </tr>
 </table>
+
