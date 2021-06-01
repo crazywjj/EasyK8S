@@ -239,7 +239,7 @@ PVC与PV绑定时会根据storageClassName（存储类名称）和accessModes（
 
 
 
-## 3.6 创建pod调用PVC
+## 3.6 创建Pod调用PVC
 
 PVC使用方式和hostpath类似
 

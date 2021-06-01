@@ -4,17 +4,15 @@
 
 
 
+# Kubernetes
 
-
-# Kubernetes 学习
-
-​		Kubernetes，简称k8s，是用8代替8个字符"ubernete"而成的缩写。是一个开源的管理云平台中多个主机上的容器化的应用，Kubernetes的目标是让部署容器化的应用简单并且高效（powerful）,Kubernetes提供了应用部署，规划，更新，维护的一种机制。
+​		Kubernetes，简称k8s，是用8代替8个字符"ubernete"而成的缩写。是一个开源的管理云平台中多个主机上的容器化的应用，Kubernetes的目标是让部署容器化的应用简单并且高效，Kubernetes提供了应用部署，规划，更新，维护的一种机制。
 
 
 
 # 一 入门
 
-主要介绍k8s是什么、组件、工作流程、主要功能和优势。
+主要包含k8s是什么、组件、工作流程、主要功能和优势。
 
 <table border="0">
 <tr>
@@ -32,7 +30,7 @@
 <tr>
    <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td>
    <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td>
-   <td><a href="安装部署/kubectl命令行工具详解.md">kubectl命令行工具详解</a></td>
+   <td><a href="安装部署/kubectl命令行工具详解.md">kubectl命令与资源管理</a></td>
    <td><a href="安装部署/kubernetes版本升级.md">kubernetes版本升级</a></td>
 </tr>
 </table>
@@ -40,9 +38,10 @@
 
 
 
+
 # 三 数据存储
 
-Kubernetes对于**有状态的容器应用或者对数据需要持久化的应用**，不仅需要将容器内的目录挂载到宿主机的目录或者emptyDir临时存储卷，而且需要更加可靠的存储来保存应用产生的重要数据，以便容器应用在重建之后仍然可以使用之前的数据。
+主要包含volume存储卷类型、PV资源池、PVC资源请求、共享存储NFS使用、StorageClass类存储、GlusterFS 持久化存储等。
 
 <table border="0">
 <tr>
@@ -54,19 +53,21 @@ Kubernetes对于**有状态的容器应用或者对数据需要持久化的应�
 </table>
 
 
+
+
 # 四 Pod与控制器
 
-Pod是Kubernetes创建或部署的**最小/最简单的基本单位**，一个Pod代表集群上正在运行的一个进程。
-
-Pod控制器是**用于实现管理pod的中间层**，确保pod资源符合预期的状态，pod的资源出现故障时，会尝试进行重启，当根据重启策略无效，则会重新新建pod的资源。
-
-
+主要包含Pod概念、Pod的创建、重启、终止过程；livenessProbe、readinessProbe探针、Node软硬亲和性、Pod软硬亲和性；taints污点、tolerations容忍度
 
 <table border="0">
 <tr>
    <td><a href="Pod与控制器/Pod介绍.md">Pod介绍</a></td>
-   <td><a href="Pod与控制器/Pod状态与生命周期.md">Pod状态与生命周期</a></td>
+   <td><a href="Pod与控制器/Pod生命周期.md">Pod生命周期</a></td>
+   <td><a href="Pod与控制器/Pod健康状态.md">Pod健康状态</a></td>
    <td><a href="Pod与控制器/Pod资源调度.md">Pod资源调度</a></td>
+</tr>
+<tr>
+   <td><a href="Pod与控制器/Pod资源申请与限制.md">Pod资源申请与限制</a></td>
 </tr>
 </table>
 
@@ -77,13 +78,38 @@ Pod控制器是**用于实现管理pod的中间层**，确保pod资源符合预�
 
 
 
-# 三 资源对象
 
-Kubernetes 中的所有内容都被抽象为"资源"，如 Pod、Service、Node 等都是资源。"对象"就是"资源"的实例，是持久化的实体。如某个具体的 Pod、某个具体的 Node。Kubernetes 使用这些实体去表示整个集群的状态。
+# 五 Service与服务发现
 
-对象的创建、删除、修改都是通过 "Kubernetes API"，也就是 "Api Server" 组件提供的 API 接口，这些是 RESTful 风格的 Api，与 k8s 的"万物皆对象"理念相符。命令行工具 "kubectl"，实际上也是调用 kubernetes api。
 
-kubectl 可以通过配置文件来创建这些 “对象”，配置文件更像是描述对象“属性”的文件，配置文件格式可以是 “JSON” 或 “YAML”，常用 “YAML”。
+
+
+
+
+
+
+
+# 六 集群管理
+
+
+
+
+
+
+
+
+
+# 七 周边生态
+
+
+
+
+
+
+
+
+
+
 
 <table border="0">
 <tr>
@@ -113,7 +139,7 @@ kubectl 可以通过配置文件来创建这些 “对象”，配置文件更�
 
 
 
-# 二进制
+# 附录
 
 <table border="0">
     <tr>

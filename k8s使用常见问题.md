@@ -75,3 +75,22 @@ Liveness probe failed: Failed to get D-Bus connection: Operation not permitted
 
 Readiness probe failed: Failed to get D-Bus connection: Operation not permitted
 
+
+
+
+
+# 6 kubectl create 和 kubectl apply创建资源对象的区别
+
+| 序号 | kubectl apply                                                | kubectl create                                               |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 1    | 根据yaml文件中包含的字段（yaml文件可以只写需要改动的字段），直接升级集群中的现有资源对象 | 首先删除集群中现有的所有资源，然后重新根据yaml文件（必须是完整的配置信息）生成新的资源对象 |
+| 2    | yaml文件可以不完整，只写需要的字段                           | yaml文件必须是完整的配置字段内容                             |
+| 3    | kubectl apply只工作在yaml文件中的某些改动过的字段            | kubectl create工作在yaml文件中的所有字段                     |
+| 4    | 在只改动了yaml文件中的某些声明时，而不是全部改动，你可以使用kubectl apply | 在没有改动yaml文件时，使用同一个yaml文件执行命令kubectl replace，将不会成功（fail掉），因为缺少相关改动信息 |
+
+
+
+
+
+
+
