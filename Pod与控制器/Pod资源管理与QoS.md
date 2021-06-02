@@ -49,7 +49,7 @@ Request能够保证Pod有足够的资源来运行，而Limit则是防止某个Po
 
 **CPU限制与请求：**
 
-vim cpu-demo.yaml
+vim  [cpu-demo.yaml](yaml\cpu-demo.yaml) 
 
 ```bash
 apiVersion: apps/v1
@@ -110,7 +110,7 @@ Events:
 
 **内存需求与限制：**
 
-vim memory-demo.yaml
+vim  [memory-demo.yaml](yaml\memory-demo.yaml) 
 
 ```
 apiVersion: apps/v1

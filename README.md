@@ -30,10 +30,11 @@
 <tr>
    <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td>
    <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td>
-   <td><a href="安装部署/kubectl命令行工具详解.md">kubectl命令与资源管理</a></td>
+   <td><a href="安装部署/kubectl命令与资源管理.md">kubectl命令与资源管理</a></td>
    <td><a href="安装部署/kubernetes版本升级.md">kubernetes版本升级</a></td>
 </tr>
 </table>
+
 
 
 
@@ -67,9 +68,11 @@
    <td><a href="Pod与控制器/Pod资源调度.md">Pod资源调度</a></td>
 </tr>
 <tr>
-   <td><a href="Pod与控制器/Pod资源申请与限制.md">Pod资源申请与限制</a></td>
+   <td><a href="Pod与控制器/Pod资源管理与QoS.md">Pod资源管理与QoS</a></td>
+   <td><a href="Pod与控制器/Pod控制器.md">Pod控制器</a></td>
 </tr>
 </table>
+
 
 
 
@@ -154,5 +157,19 @@
     <td><a href="附录/promethues/prometheus告警规则.md">prometheus 告警规则</a></td>
     <td><a href="附录/promethues/prometheus浅析.md">prometheus 浅析</a></td>
     </tr>
-</table>
+</table>       
+<table border="0">
+    <tr>
+        <td><a href="k8s使用常见问题.md">k8s使用常见问题</a></td>
+    </tr>
+</table>    
+
+
+
+
+
+
+
+
+
 
