@@ -181,7 +181,7 @@ rc-nginx-mwx8x            1/1     Running   0          46s
 
 除了通过命令的方式修改，我们还可以通过yaml文件的方式进行缩放。
 
-**注意：** 删除RC并不会影响通过该RC已创建号的Pod。为了删除所有Pod，可以设置replicas的值为0，然后更新该RC。另外,kubectl提供了`stop`和`delete`命令来一次性删除RC和RC控制的全部Pod
+> ==**注意：**== 删除RC并不会影响通过该RC已创建号的Pod。为了删除所有Pod，可以设置replicas的值为0，然后更新该RC。另外,kubectl提供了`stop`和`delete`命令来一次性删除RC和RC控制的全部Pod
 
 
 
@@ -189,7 +189,7 @@ rc-nginx-mwx8x            1/1     Running   0          46s
 
 指定镜像升级，每10秒升级一个
 
-```
+```bash
 # 基于命令
 kubectl rolling-update rc-nginx --image=nginx:1.20.0 --update-period=10s
 # 基于yaml文件升级
@@ -266,7 +266,7 @@ rs-nginx   1         1         1       7m49s   nginx-demo   nginx:1.14.0   app=r
 
 ```
 
-**注意：**强行修改RS控制器下管控的Pod资源的标签，会导致它不再被控制器作为副本计数，这样就会触发RS对副本对象进行补足机制。
+> ==**注意：**==强行修改RS控制器下管控的Pod资源的标签，会导致它不再被控制器作为副本计数，这样就会触发RS对副本对象进行补足机制。
 
 测试如下：将` rs-nginx-sbf2b` 的标签 app 的值置空
 
@@ -350,7 +350,9 @@ spec:
 
 对新版本的清单文件执行`kubectl apply`  或  `kubectl replace `  命令即可完成 rs-nginx控制器资源的修改操作：
 
-注意：使用`kubectl replace`进行更新后，需要手动删除原来的pod才能更新为新版
+> ==**注意**==：使用`kubectl replace`进行更新后，需要手动删除原来的pod才能更新为新版
+
+
 
 ```bash
 
@@ -394,8 +396,6 @@ $ kubectl scale replicasets rs-nginx --current-replicas=2 --replicas=5
 
 尽管 ReplicaSet 控制器功能强大，但在实践中 ，它却并非是用户直接使用的控制器，而是要由比其更高一级抽象的 Deployment 控制器对象来调用。
 
-
-
 # 3 Deployment控制器
 
 Deployment是Kubernetes在1.2版本中引入的新概念，用于更好地解决Pod的编排问题。是一个更高层次的API对象，它管理ReplicaSets和Pod，并提供声明式更新等功能。官方建议使用Deployment管理ReplicaSets，而不是直接使用ReplicaSets。
@@ -414,11 +414,14 @@ Deployment 控制器比ReplicaSets多了很多特性：
 
 Deployment 是标准的 Kubernetes API 资源，它建构于 ReplicaSet 资源之上，于是其spec 段中嵌套使用的字段包含了ReplicaSet 控制器支持的 replicas、selector、template、minReadySeconds ，它也利用这些信息完成了其二级资源 ReplicaSet 对象的创建。
 
-vim 
+vim  [nginx-deployment.yaml](yaml\nginx-deployment.yaml) 
 
 ```yaml
+# 声明api的版本
 apiVersion: apps/v1
+# kind代表资源的类型，资源是Deployment
 kind: Deployment
+# 资源叫什么名字，是在其属性metadata里面的。
 metadata:
   name: nginx-deployment
 spec:
@@ -448,7 +451,10 @@ spec:
 
 执行后查看：
 
-```
+```bash
+$ kubectl create -f nginx-deployment.yaml --record
+# --record参数可以记录当前版本的Deployment都执行过哪些命令。
+
 $ kubectl get pod |grep nginx-deployment
 nginx-deployment-845c84b94c-g2g95   1/1     Running   0          7m16s
 nginx-deployment-845c84b94c-gkj4q   1/1     Running   0          7m16s
@@ -476,7 +482,9 @@ nginx-deployment   3/3     3            3           6m36s
 
 
 
-## 3.2 Deployment更新策略
+## 3.2 更新Deployment
+
+### 3.2.1 Deployment更新策略
 
 ReplicaSet 控制器的应用更新，要手动分成多步并以特定的次序进行，过程复杂且容易出错，而 Deployment 却只需要由用户指定在 Pod 模板中要改动的内容，例如：容器镜像文件的版本，剩下的步骤由其自动完成。
 
@@ -487,13 +495,575 @@ Deployment 支持两种更新策略：滚动更新（ rolling update ）和重�
 - maxSurge：指定升级期间存在的总 Pod 对象数量最多可超出期望值的个数，其值可以是0或正整数，也可以是一个期望值的百分比；例如，如果期望值为3 ，当前的属性值为1，则表示 Pod 对象的总数不能超过4。
 - maxUnavailable ：升级期间正常可用的 Pod 副本数（包括新旧版本）最多不能低于期望数值的个数 ，其值可以是0或正整数，也可以是 个期望值的百分比；默认值为1，该值意味着如果期望值是3 ，则升级期间至少要有两个 Pod 对象处于正常提供服务的状态。
 
-> **注意：**max Surge max Unavailab 性的值不可同时为0 ，否则 Pod对象的副本数量在符合用户期望的数量后无法做出合理变动以进行滚动更新操作。
+> ==**注意：**==max Surge和max Unavailab 属性的值不可同时为0 ，否则 Pod对象的副本数量在符合用户期望的数量后无法做出合理变动以进行滚动更新操作。
 
 配置时，用户还可以使用 Deplpoyment 控制器的 `spec.minReadySeconds` 属性来控制应用升级的速度。Deployment 控制器也支持用户保留其滚动更新历史中的旧 ReplicaSet 对象版本，使用`Spec.revisionHistoryLimit`，进行定义保存历史版本数量。
 
-> **注意**：为了保存版本升级的历史，需要在创建 Deployment 对象时于命令中使用`--record`选项。
+> ==**注意：**==为了保存版本升级的历史，需要在创建 Deployment 对象时于命令中使用`--record`选项。
 
 
 
 尽管滚动更新以节约系统资源著称，但它也存在。直接改动现有环系统引人不确定性风险，而且升级过程出现问题后，执行回滚操作也 较为缓慢。有鉴于此， 金丝雀部署可能是较为理想的方式，当然，如果不考虑虑系统资源的可用性，那么传统的蓝绿部署也是不错的选择。
+
+
+
+### 3.2.2 Deployment更新操作
+
+修改 Pod 模板相关的配置参数便能完成 Deployment 控制器资源的更新。由于是声明式配置，因此对 Deployment 控制器资源的修改尤其适合使用 `apply`和`patch `命令来进行，如果仅是修改容器镜像， `set image` 命令更为易用。
+
+**1、设置等待时间**
+
+为了使得升级过程更易于观测，这里先使用`kubectl patch`命令为其`specminReadySeconds `字段定义等待时长为5s：
+
+```bash
+$ kubectl patch deployments nginx-deployment -p '{"spec": {"minReadySeconds": 5}}'
+```
+
+patch 的补丁形式为 JSON 格式，以 -p 指定设置`spec.minReadySeconds` 的值。
+
+> ==**注意：**==修改 Deployment 控制器的 `minReadySeconds`、`replicas`和`strategy`等字段的值不会触发 Pod 资源更新操作，因为他们不属于模板的内嵌字段，对现存的 Pod 不会产生任何影响。
+
+
+
+**2、更改Pod模板中的镜像**
+
+修改nginx-deployment中的nginx镜像由nginx:1.14.0变为nginx:1.20.0
+
+```bash
+$ kubectl set image deployment/nginx-deployment nginx=nginx:1.20.0
+deployment.apps/nginx-deployment image updated
+```
+
+或者使用edit命令来编辑 Deployment，修改` .spec.template.spec.containers[0].image `，将nginx:1.14.0变为nginx:1.20.0
+
+```bash
+$ kubectl edit deployment/nginx-deployment
+```
+
+修改后你会发现，deployment正在自动更新，无需人为介入。
+
+
+
+**3、查看更新进度**
+
+`kubectl rollout status` 命令可用于打印滚动更新过程中的状态信息：
+
+```bash
+$ kubectl rollout status deployment/nginx-deployment
+Waiting for deployment "nginx-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "nginx-deployment" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "nginx-deployment" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "nginx-deployment" rollout to finish: 1 old replicas are pending termination...
+deployment "nginx-deployment" successfully rolled out
+
+```
+
+还可以使用 `kubectl get ployment -- watch` 命令监控其更新过程中 Pod 对象的变化过程
+
+```bash
+$ kubectl get deployments nginx-deployment --watch
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   3/3     3            3           17h
+nginx-deployment   3/3     3            3           17h
+nginx-deployment   3/3     3            3           17h
+nginx-deployment   3/3     0            3           17h
+nginx-deployment   3/3     1            3           17h
+nginx-deployment   4/3     1            3           17h
+nginx-deployment   4/3     1            4           17h
+nginx-deployment   3/3     1            3           17h
+nginx-deployment   3/3     2            3           17h
+nginx-deployment   4/3     2            3           17h
+nginx-deployment   4/3     2            4           17h
+nginx-deployment   3/3     2            3           17h
+nginx-deployment   3/3     3            3           17h
+nginx-deployment   4/3     3            3           17h
+nginx-deployment   4/3     3            4           17h
+nginx-deployment   3/3     3            3           17h
+
+```
+
+由此可以看出，UP-TO-DATE 的 replica 的数目由3-->0-->1-->2-->3最终达到配置中要求的数目。
+
+
+
+滚动更新时， nginx-deployment 控制器会创建一个新的 ReplicaSet 控制器来管控新版本的 Pod 对象，升级完成后，旧版本的ReplicaSet 会保留在历史记录中，但其此前的Pod 对象将会被删除。通过执行`kubectl get rs`可以看到 Deployment 更新了Pod：
+
+```bash
+$ kubectl get rs
+NAME                          DESIRED   CURRENT   READY   AGE
+nginx-deployment-57dd96ddb9   0         0         0       17h
+nginx-deployment-6f98bfdddd   3         3         3       7m2s
+```
+
+最后验证nginx镜像版本是否更改：
+
+```bash
+$ kubectl get pod|grep nginx-deployment
+nginx-deployment-6f98bfdddd-65xrr   1/1     Running   0          10m
+nginx-deployment-6f98bfdddd-7w5kn   1/1     Running   0          9m39s
+nginx-deployment-6f98bfdddd-jnhr6   1/1     Running   0          10m
+$ kubectl exec -it nginx-deployment-6f98bfdddd-65xrr -- nginx -v
+nginx version: nginx/1.20.0
+
+```
+
+
+
+**4、deployments更新过程分析**
+
+查看Deployment详细：
+
+```bash
+$ kubectl describe deployments nginx-deployment
+Name:                   nginx-deployment
+Namespace:              default
+CreationTimestamp:      Wed, 02 Jun 2021 17:26:21 +0800
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 2
+Selector:               name=nginx
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        5
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  name=nginx
+  Containers:
+   nginx:
+    Image:      nginx:1.20.0
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:     400m
+      memory:  256Mi
+    Requests:
+      cpu:        200m
+      memory:     64Mi
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   nginx-deployment-6f98bfdddd (3/3 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  14m   deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 1
+  Normal  ScalingReplicaSet  13m   deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 2
+  Normal  ScalingReplicaSet  13m   deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 2
+  Normal  ScalingReplicaSet  12m   deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 1
+  Normal  ScalingReplicaSet  12m   deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 3
+  Normal  ScalingReplicaSet  12m   deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 0
+
+```
+
+会发现当镜像版本有更新时，既要保证服务可用，又要保证在线更新，流程应该是：
+
+1. 先增加一个pod，镜像版本为新版本
+2. pod可用之后，删除一个老版本pod
+3. 循环第1、2步，直到老版本pod全部删除，新版本的pod全部可用
+
+- 上述的这个过程就是replicaset的作用，它根据需求，自动的增加新版本pod，然后删除老版本pod，直到老版本pod全部删除，新版本的pod全部可用。
+
+- 如果此时版本需要回退，那replicaset需要把刚才的步骤逆向更新一遍，实现版本回退。
+
+- **deployment的作用就是管理replicaset**。deployment会保存各个版本的replicaset，一旦需要进行版本回滚，deployment会立即回滚replicaset的版本，从而控制pod状态。
+
+  
+
+## 3.3 回退Deployment
+
+若因各种原因导致滚动更新无法正常进行，如镜像文件获取失败、 金丝雀遇险等，则应该将应用回滚到之前的版本，或者回滚到由用户指定的历史记录中的版本。
+
+假设我们在更新 Deployment 的时候犯了一个拼写错误，将镜像的名字写成了nginx:1.200，而正确的名字应该是nginx:1.20.0：
+
+```bash
+$ kubectl set image deployment/nginx-deployment nginx=nginx:1.200
+deployment.apps/nginx-deployment image updated
+
+$ kubectl rollout status deployments nginx-deployment
+Waiting for deployment "nginx-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
+...
+#会发现Rollout 将会卡住。
+
+```
+
+Ctrl-C 停止上面的 rollout 状态监控。
+
+```bash
+$ kubectl get pod|grep nginx-deployment
+nginx-deployment-57dd96ddb9-4gsjt   1/1     Running            0          38m
+nginx-deployment-57dd96ddb9-c9489   1/1     Running            0          38m
+nginx-deployment-57dd96ddb9-qfhww   1/1     Running            0          38m
+nginx-deployment-7798b55bfd-hw4rm   0/1     ImagePullBackOff   0          3m20s
+
+```
+
+这种情况，并没有影响正常的Pod，删除有问题的Pod，重新定义镜像版本即可发布。
+
+> ==**注意：**== 
+>
+> 1. 只要 Deployment 的 rollout 被触发就会创建一个 revision。也就是说当且仅当 Deployment 的 Pod template（如.spec.template）被更改，例如更新template 中的 label 和容器镜像时，就会创建出一个新的 revision。
+> 2. Deployment controller会自动停止坏的 rollout，并停止扩容新的 ReplicaSet。
+
+
+
+如果是镜像已经更新完为nginx=nginx:1.20.0，发现版本有BUG，需要回滚：
+
+- **查看检查下 Deployment 的 历史revision**
+
+```
+$ kubectl rollout history deployments nginx-deployment
+deployment.apps/nginx-deployment
+REVISION  CHANGE-CAUSE
+1         kubectl create --filename=nginx-deployment.yaml --record=true
+2         kubectl create --filename=nginx-deployment.yaml --record=true
+3         kubectl create --filename=nginx-deployment.yaml --record=true
+
+```
+
+因为创建 Deployment 的时候使用了`--recored`参数，可以记录命令，方便查看每次 revision 的变化。
+
+- **查看单个revision 的详细信息**
+
+```bash
+$ kubectl rollout history deployments nginx-deployment --revision=3
+deployment.apps/nginx-deployment with revision #3
+Pod Template:
+  Labels:	name=nginx
+	pod-template-hash=6f98bfdddd
+  Annotations:	kubernetes.io/change-cause: kubectl create --filename=nginx-deployment.yaml --record=true
+  Containers:
+   nginx:
+    Image:	nginx:1.20.0
+    Port:	80/TCP
+    Host Port:	0/TCP
+    Limits:
+      cpu:	400m
+      memory:	256Mi
+    Requests:
+      cpu:	200m
+      memory:	64Mi
+    Environment:	<none>
+    Mounts:	<none>
+  Volumes:	<none>
+
+```
+
+会发现revision=3是更新后的版本。
+
+- **版本回退**
+
+回退当前的 rollout 到之前的版本（也就是上一次）：
+
+```bash
+$ kubectl rollout undo deployment/nginx-deployment
+```
+
+也可以使用 `--to-revision`参数指定某个历史版本：
+
+```
+$ kubectl rollout undo deployment/nginx-deployment --to-revision=1
+```
+
+该 Deployment 现在已经回退到了先前的稳定版本。如您所见，Deployment controller产生了一个回退到revison 2的DeploymentRollback的 event。
+
+```bash
+$ kubectl describe deployment nginx-deployment
+Name:                   nginx-deployment
+Namespace:              default
+CreationTimestamp:      Thu, 03 Jun 2021 14:19:41 +0800
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 5
+                        kubernetes.io/change-cause: kubectl create --filename=nginx-deployment.yaml --record=true
+Selector:               name=nginx
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  name=nginx
+  Containers:
+   nginx:
+    Image:      nginx:1.14.0
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:     400m
+      memory:  256Mi
+    Requests:
+      cpu:        200m
+      memory:     64Mi
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   nginx-deployment-57dd96ddb9 (3/3 replicas created)
+Events:
+  Type    Reason             Age                  From                   Message
+  ----    ------             ----                 ----                   -------
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 1
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 2
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 2
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 1
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled up replica set nginx-deployment-6f98bfdddd to 3
+  Normal  ScalingReplicaSet  13m                  deployment-controller  Scaled down replica set nginx-deployment-57dd96ddb9 to 0
+  Normal  ScalingReplicaSet  3m22s (x2 over 20m)  deployment-controller  Scaled up replica set nginx-deployment-7798b55bfd to 1
+  Normal  ScalingReplicaSet  45s (x2 over 13m)    deployment-controller  Scaled down replica set nginx-deployment-7798b55bfd to 0
+  Normal  ScalingReplicaSet  45s                  deployment-controller  Scaled up replica set nginx-deployment-57dd96ddb9 to 1
+  Normal  ScalingReplicaSet  43s                  deployment-controller  Scaled up replica set nginx-deployment-57dd96ddb9 to 2
+  Normal  ScalingReplicaSet  43s                  deployment-controller  Scaled down replica set nginx-deployment-6f98bfdddd to 2
+  Normal  ScalingReplicaSet  40s (x2 over 54m)    deployment-controller  Scaled up replica set nginx-deployment-57dd96ddb9 to 3
+  Normal  ScalingReplicaSet  40s                  deployment-controller  Scaled down replica set nginx-deployment-6f98bfdddd to 1
+  Normal  ScalingReplicaSet  37s                  deployment-controller  Scaled down replica set nginx-deployment-6f98bfdddd to 0
+
+```
+
+通过设置`.spec.revisonHistoryLimit`项来指定 deployment 最多保留多少 revision 历史记录。如果将该项设置为0，Deployment就不允许回退了。
+
+```bash
+$ kubectl edit deployment/nginx-deployment
+...
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+
+```
+
+
+
+
+
+
+
+
+
+
+
+# 企业常见几种发布方式
+
+**前言**
+
+在软件上线之前，不可避免地要对软件的正确性、可靠性进行测试，又不希望停机维护、不影响用户体验，并且在新版本出现问题的时候能够及时回退。所以，需要有一套完整的部署方案，灰度发布、滚动发布、蓝绿部署都是常见的手段，而A/B测试则是对用户体验进行调查的测试手段，这里一并学习。
+
+## 蓝绿发布
+
+**（1）定义**
+
+蓝绿部署是不停老版本，部署新版本然后进行测试。确认OK后将流量切到新版本，然后老版本同时也升级到新版本。
+
+**（2）特点**
+
+蓝绿部署无需停机，并且风险较小。
+
+**（3）优势和不足**
+
+- 优势
+  升级切换和回退速度非常快。
+- 不足
+  切换是全量的，如果V2版本有问题，则对用户体验有直接影响。需要两倍机器资源。
+
+**（4）发布过程**
+
+①蓝绿发布的初始状态是两组服务器（简单理解为蓝色和绿色）都提供服务，且版本一致为v1。
+
+<img src="assets/image-20210604103840172.png" alt="image-20210604103840172" style="zoom:67%;" />
+
+
+
+
+
+②着步将蓝色服务器流量引向绿色服务器，直至全部流量都切换至绿色服务器，蓝色服务器不再提供任何服务；
+
+<img src="assets/image-20210604104018570.png" alt="image-20210604104018570" style="zoom:67%;" />
+
+
+
+③开始升级蓝色服务器的应用为v2，版本 v2 与 v1 不同(新功能、Bug修复等)；然后再将绿色服务器流量着步全量切换至蓝色服务器，直至绿色服务器不提供服务；
+
+<img src="assets/image-20210604104405186.png" alt="image-20210604104405186" style="zoom:67%;" />
+
+④两个版本并行运行一段时间，但是只有蓝色v2的应用提供服务，如果版本v2测试正常；就将绿色v1版本的应用升级至v2，并将部分流量重新引向绿色服务器，从而实现两组服务器提供v2版本的服务。如果v2测试异常，绿色v1版本不升级，并将流量迅速切换至绿色v1应用。
+
+<img src="assets/image-20210604104833830.png" alt="image-20210604104833830" style="zoom:67%;" />
+
+**（5）演示**
+
+准备两套yaml文件
+
+
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-v1
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+      version: "1.14.0"
+  replicas: 5
+  revisionHistoryLimit: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: "1.14.0"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nginx-deployment-v1
+          image: nginx:1.14.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 80
+            name: nginx
+```
+
+
+
+
+
+
+
+
+
+## 灰度发布/金丝雀发布
+
+**（1）定义**
+
+金丝雀发布是能够平滑过渡的一种发布方式，也是增量发布的一种类型，是在原有版本可用的情况下，同时部署一个新版本应用作为“金丝雀”，测试新版本的性能和表现，以保障整体系统稳定的情况下，尽早发现、调整问题。
+
+金丝雀发布一般先发 1 台，或者一个小比例，例如 2% 的服务器，主要做流量验证用，也称为金丝雀 (Canary) 测试（国内常称灰度测试）。简单的金丝雀测试一般通过手工测试验证，复杂的金丝雀测试需要比较完善的监控基础设施配合，通过监控指标反馈，观察金丝雀的健康状况，作为后续发布或回退的依据。
+
+
+
+**（2）发布过程**
+
+灰度发布／金丝雀发布由以下几个步骤组成：
+1、准备好部署各个阶段的工件，包括：构建工件，测试脚本，配置文件和部署清单文件。
+2、从负载均衡列表中移除掉“金丝雀”服务器。
+3、升级“金丝雀”应用（排掉原有流量并进行部署）。
+4、对应用进行自动化测试。
+5、将“金丝雀”服务器重新添加到负载均衡列表中（连通性和健康检查）。
+6、如果“金丝雀”在线使用测试成功，升级剩余的其他服务器。（否则就回滚）灰度发布可以保证整体系统的稳定，在初始灰度的时候就可以发现、调整问题，以保证其影响度。
+
+<img src="assets/aHR0cHM6Ly9.png" alt="aHR0cHM6Ly9" style="zoom:67%;" />
+
+
+
+（3）适用场景
+① 不停止老版本，额外搞一套新版本，不同版本应用共存。
+② 灰度发布中，常常按照用户设置路由权重，例如90%的用户维持使用老版本，10%的用户尝鲜新版本。
+③ 经常与A/B测试一起使用，用于测试选择多种方案。AB test就是一种灰度发布方式，让一部分用户继续用A，一部分用户开始用B，如果用户对B没有什么反对意见，那么逐步扩大范围，把所有用户都迁移到B上面来。
+
+
+
+
+
+## 滚动发布
+
+在金丝雀发布基础上的进一步优化改进，是一种自动化程度较高的发布方式，用户体验比较平滑，是目前成熟型技术组织所采用的主流发布方式。
+
+**（1）定义**
+
+滚动发布，一般是取出一个或者多个服务器停止服务，执行更新，并重新将其投入使用。周而复始，直到集群中所有的实例都更新成新版本。这种部署方式相对于蓝绿部署，更加节约资源——它不需要运行两个集群、两倍的实例数。我们可以部分部署，例如每次只取出集群的20%进行升级。
+
+
+
+**（2）发布过程**
+
+①滚动式发布一般先发 1 台，或者一个小比例，如 2% 服务器，主要做流量验证用，类似金丝雀 (Canary) 测试。
+
+②滚动式发布需要比较复杂的发布工具和智能 LB，支持平滑的版本替换和流量拉入拉出。
+
+③每次发布时，先将老版本 V1 流量从 LB 上摘除，然后清除老版本，发新版本 V2，再将 LB 流量接入新版本。这样可以尽量保证用户体验不受影响。
+
+④一次滚动式发布一般由若干个发布批次组成，每批的数量一般是可以配置的（可以通过发布模板定义）。例如第一批 1 台（金丝雀），第二批 10%，第三批 50%，第四批 100%。每个批次之间留观察间隔，通过手工验证或监控反馈确保没有问题再发下一批次，所以总体上滚动式发布过程是比较缓慢的 (其中金丝雀的时间一般会比后续批次更长，比如金丝雀 10 分钟，后续间隔 2 分钟)。
+
+⑤回退是发布的逆过程，将新版本流量从 LB 上摘除，清除新版本，发老版本，再将 LB 流量接入老版本。和发布过程一样，回退过程一般也比较慢的。
+
+⑥滚动式发布国外术语通常叫 Rolling Update Deployment。
+
+
+
+**（3）优势和适用场合**
+
+**优势：**
+
+- 用户体验影响小，体验较平滑
+
+**不足：**
+
+- 发布和回退时间比较缓慢
+- 发布工具比较复杂，LB 需要平滑的流量摘除和拉入能力
+
+**适用场合：**
+
+- 用户体验不能中断的网站业务场景
+- 有一定的复杂发布工具研发能力；
+
+
+
+## A/B测试
+
+首先需要明确的是，A/B测试和蓝绿部署以及金丝雀，完全是两回事。
+
+蓝绿部署和金丝雀是发布策略，目标是确保新上线的系统稳定，关注的是新系统的BUG、隐患。
+
+A/B测试是效果测试，同一时间有多个版本的服务对外服务，这些服务都是经过足够测试，达到了上线标准的服务，有差异但是没有新旧之分（它们上线时可能采用了蓝绿部署的方式）。
+
+A/B测试关注的是不同版本的服务的实际效果，譬如说转化率、订单情况等。
+
+A/B测试时，线上同时运行多个版本的服务，这些服务通常会有一些体验上的差异，譬如说页面样式、颜色、操作流程不同。相关人员通过分析各个版本服务的实际效果，选出效果最好的版本。
+
+![abtesting](assets/abtesting.png)
+
+在A/B测试中，需要能够控制流量的分配，譬如说，为A版本分配10%的流量，为B版本分配10%的流量，为C版本分配80%的流量。
+
+参考：
+
+1. [Blue-green Deployments, A/B Testing, and Canary Releases](http://blog.christianposta.com/deploy/blue-green-deployments-a-b-testing-and-canary-releases/)
+2. [BlueGreenDeployment](https://martinfowler.com/bliki/BlueGreenDeployment.html)
+3. https://help.aliyun.com/document_detail/85948.html
+
+
 
