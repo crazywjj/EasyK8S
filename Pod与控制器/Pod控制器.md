@@ -23,9 +23,9 @@ Pod 控制器由 master的kube-controller-manager 组件提供，常见的此类
 - **Deployment**
   - 工作在ReplicaSet之上，用于管理无状态应用，目前来说最好的控制器。支持滚动更新和回滚功能，还提供声明式配置。
 - **DaemonSet**
-  - 用于确保集群中的每一个节点只运行特定的pod副本，通常用于实现系统级后台任务,比如ingress,elk.服务是无状态的,服务必须是守护进程。
+  - 用于确保集群中的每一个节点只运行特定的pod副本，通常用于实现系统级后台任务,比如ingress,elk。**服务是无状态的**,服务必须是守护进程。
 - **StatefulSet**
-  - 管理有状态应用,比如redis,mysql。
+  - 管理有状态应用，比如redis,mysql。
 - **Job/CronJob**
   - Job是一次性任务运行，完成就立即退出，不需要重启或重建。
   - CronJob是周期性任务控制，执行后就退出，不需要持续后台运行。
@@ -846,6 +846,260 @@ spec:
 
 
 
+## 3.4 Deployment扩缩容
+
+
+
+通过修改 `spec.replicas` 即可修改 Deployment 控制器中 Pod 资源的副本数 ，它将实时作用于控制器并直接生效。 
+
+Deployment 控制器是声明式配 replicas 属性的值可直接修改资源配置文件，然后使用 `kubectl apply` 进行应用，也可以使用 `kubectl edit `对其进行实时修改。而前一种方式能够将修改结果予以长期留存。
+
+Deployment 通过 ReplicaSet 控制其 Pod 资源，因此扩缩的方式是相同的，也可以使用`kubectl scale`  命令进行扩缩容，只是直接作用的资源对象有所不同。
+
+
+
+```bash
+#扩容
+$ kubectl scale deployment nginx-deployment-v4 --replicas=10
+#缩容
+$ kubectl scale deployment nginx-deployment-v4 --replicas=3
+```
+
+
+
+
+
+# 4 DaemonSet 控制器
+
+DaemonSet是Kubernetes 1.2版本新增的一种资源对象，用于管理在集群中每个Node上仅运行一份Pod的副本实例，后续新加入集群的工作节点也会自动创建一个相关的 Pod 对象，当从集群移除节点时，此 Pod 象也将被自动回收。管理员也可以使用节点选择器及节点标签指定仅在部分具有特定特征的节点上运行指定的 Pod 对象。
+
+<img src="assets/image-20210607135335580.png" alt="image-20210607135335580" style="zoom:80%;" />
+
+DaemonSet 是一种特殊的控制器，它有特定的应用场景 ，通常运行那些执行系统级操作任务的应用，其应用场景具体如下：
+
+- 运行集群存储的守护进程，如在各个节点上运 glusterd、ceph。
+
+- 在各个节点上运行日志收集守护进程 ，如 fluentd、logstash。
+
+- 在各个节点上运行监控系统的代理 护进程，如 Prometheus Node Exporter、collectd、Datadog agent、New Relic agent或Ganglia gmond等。
+
+
+
+## 4.1 创建 DaemonSet 资源对象
+
+vim  [fluentd-daemonset.yaml](yaml\fluentd-daemonset.yaml) 
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-elasticsearch
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+spec:
+  selector:
+    matchLabels:
+      name: fluentd-elasticsearch
+  template:
+    metadata:
+      labels:
+        name: fluentd-elasticsearch
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: fluentd-elasticsearch
+        image: mirrorgooglecontainers/fluentd-elasticsearch:v2.4.0
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+
+```
+
+这个 DaemonSet，管理的是一个 fluentd-elasticsearch 镜像的 Pod。通过 fluentd 将 Docker 容器里的日志转发到 ElasticSearch 中。
+
+这个DaemonSet中使用 selector 选择管理所有携带了 name=fluentd-elasticsearch 标签的 Pod。然后使用template定义了pod模板。
+
+然后在运行这个DaemonSet后，一个叫DaemonSet Controller的控制器会从 Etcd 里获取所有的 Node 列表，然后遍历所有的 Node。然后检查Node上是不是又name=fluentd-elasticsearch 标签的 Pod 在运行。
+
+
+> **==注意：==**在Kubernetes 1.8之后，必须指定`.spec.selector`来确定这个DaemonSet对象管理的Pod，通常与`.spec.template.metadata.labels`中定义的Pod的label一致。
+
+
+
+## 4.2 更新 DaemonSet 对象
+
+DaemonSet Kubemetes 1.6 本起也开始支持更新机制 ，相关配置定义在 `spec.update-Strategy` 嵌套字段中。 目前，它支持 RollingUpdate （滚动更新）和 OnDelete （删除时更新）两种更新策略，滚动更新为默认的更新策略，工作逻辑类似于 Deployment 控制，不过仅支持使用 maxUnavailabe 性定义最大不可用 Pod 资源副本数（默认值为 ）， 而删除时更新的方式则是在删除相应节点的 Pod 源后重建并更新为新版本。
+
+DaemonSet 控制器的滚动更新机制也可以借助于 minReadySeconds 字段控制滚动节奏，必要时可以执行暂停和继续操作，因此它也能够设计为金丝雀发布机制。另外，故障的更新操作也可以进行回滚，包括回滚至 revision 历史记录中的任何 个指定的版本。
+
+
+
+
+
+# 5 StatefulSet控制器
+
+statefulset是为了解决**有状态服务**，而其它的资源类型（RC、Deployment、replicaSets、DaemonSet 和 Job）是解决无状态服务而设计的。特别是一些复杂的中间件集群，例如MySQL集群、MongoDB 集群、kafka集群、ZooKeeper集群等，这些应用集群有4个共同点。
+
+（1）每个节点都有固定的身份ID，通过这个ID，集群中的成员可以相互发现并通信。 
+
+（2）集群的规模是比较固定的，集群规模不能随意变动。 
+
+（3）集群中的每个节点都是有状态的，通常会持久化数据到永久存储中。 
+
+（4）如果磁盘损坏，则集群里的某个节点无法正常运行，集群功能受损
+
+**应用场景：**
+
+1、稳定的持久化存储，即Pod重新调度后还是能访问到相同的持久化数据，基于PVC来实现。
+
+2、稳定的网络标志，即Pod重新调度后其PodName和HostName不变，基于Headless Service（没有Cluster IP的Service）来实现
+
+3、有序部署、有序扩展，Pod是有顺序的，在部署和扩展的时候要依据定义的顺序依次进行（从0到N-1，在下一个Pod运行之前所有之前的Pod必须是Running和Ready状态，基于init containers来实现）
+
+4、有序收缩、有序删除
+
+5、有序的滚动更新
+
+StatefulSet 通常由三个组件构成 `Headless Service`、`StatefulSet`和`volumeClaimTemplate`。
+
+-  Headless Service 用于为 Pod 资源标识符生成可解析的 DNS 资源记录
+- StatefulSet 用于管控 Pod 资源
+- volumClaimTemplate 则基于静态或动态的 PV 供给方式为 Pod 资源提供专有且固定的存储
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 6 Job 控制器
+
+与Deployment、DaemonSet 控制器管理的守护进程类的服务应用不同的是， Job 控制器用于**调配 Pod 对象运行一次性任务**，容器中的进程在正常运行结束后不会对其进行重启，而是将 Pod 象置于`Completed`状态。
+
+若容器中的进程因错误而终止，则需要依配置确定是否重启（ **Job的restartPolicy（重启策略）**只能设置为 **Never** 或者 **OnFailure**），未运行完成的 Pod 对象因其所在的节点故障而意外终止后会被重新调度。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1323,19 +1577,6 @@ nginx version: nginx/1.20.0
 - maxUnavaible：升级过程中最多有多少个POD处于无法提供服务的状态
   - 当maxSurge不为0时，该值也不能为0。
   - 例如：maxUnavaible=1，则表示Kubernetes整个升级过程中最多会有1个POD处于无法服务的状态。
-    
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

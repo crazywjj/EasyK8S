@@ -634,7 +634,9 @@ kubectl apply -f manifests/ingress-monitoring.yaml
 
 展开Status菜单，查看targets，可以看到只有图中两个监控任务没有对应的目标，这和serviceMonitor资源对象有关 
 
-![1587695789694](assets/1587695789694.png)查 **原因分析：**
+![1587695789694](assets/1587695789694.png)
+
+查 **原因分析：**
 
 　　因为serviceMonitor选择svc时，是根据labels标签选取，而在指定的命名空间(kube-system)，并没有对应的标签。kube-apiserver之所以正常是因为kube-apiserver 服务 namespace 在default使用默认svc kubernetes。其余组件服务在kube-system 空间 ，需要单独创建svc。
 

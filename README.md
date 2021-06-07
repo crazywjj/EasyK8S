@@ -66,15 +66,34 @@
 </table>
 
 
-# 五 Service与服务发现
 
 
 
-# 六 集群管理
+
+# 五 ConfigMap和Secret
 
 
 
-# 七 周边生态
+# 六 Service与服务发现
+
+
+
+# 七 集群管理
+
+
+
+# 八 生态周边
+
+<table border="0">
+<tr>
+   <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
+   <td><a href="生态周边/kube-prometheus监控.md">kube-prometheus监控</a></td>
+</tr>
+</table>
+
+
+
+
 
 <table border="0">
 <tr>
@@ -113,6 +132,7 @@
         <td><a href="k8s使用常见问题.md">k8s使用常见问题</a></td>
     </tr>
 </table>    
+
 
 
 
