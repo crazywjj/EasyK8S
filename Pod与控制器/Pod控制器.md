@@ -63,10 +63,6 @@ Pod Template 是Kubernetes API 的常用资源类型，常用于为控制器指�
 
 
 
-
-
-
-
 # 2 RC和RS控制器
 
 Replication Controller（简称RC）：是Kubernetes系统中的核心概念之一，即声明某种Pod的副本数量在任意时刻都符合某个预期值。
@@ -78,8 +74,6 @@ ReplicaSet（简称RS）: 是Replication Controller 升级版本。当用户创�
 **Replica Set和Replication Controller的区别：**
 
 Replica Set与RC当前的唯一区别是，**Replica Sets支持基于集合的Label selector（Set-based selector）如：version in (v1.0, v2.0) 或 env notin (dev, qa)**，**而 RC只支持基于等式的Label Selector（equality-based selector）如：env=dev或environment!=qa**，这使得Replica Set的功能更强。
-
-
 
 
 
@@ -492,10 +486,15 @@ Deployment 支持两种更新策略：滚动更新（ rolling update ）和重�
 
 滚动更新时，应用升级期间还要确保可用的 Pod 对象数量不低于某阈值，以确保可以持续处理客户端的服务请求，变动的方式和 Pod 对象的数量范围将通过 `spec.strategy.rollingUpdate.maxSurge` 和 `spec.strategy.rollingUpdate.maxUnavailable` 两个属性协同进行定义，它的功能如下：
 
-- maxSurge：指定升级期间存在的总 Pod 对象数量最多可超出期望值的个数，其值可以是0或正整数，也可以是一个期望值的百分比；例如，如果期望值为3 ，当前的属性值为1，则表示 Pod 对象的总数不能超过4。
-- maxUnavailable ：升级期间正常可用的 Pod 副本数（包括新旧版本）最多不能低于期望数值的个数 ，其值可以是0或正整数，也可以是 个期望值的百分比；默认值为1，该值意味着如果期望值是3 ，则升级期间至少要有两个 Pod 对象处于正常提供服务的状态。
+- maxSurge：升级过程中最多可以比原先设置多出的POD数量 ，可以是数量也可以是百分比。  
 
-> ==**注意：**==max Surge和max Unavailab 属性的值不可同时为0 ，否则 Pod对象的副本数量在符合用户期望的数量后无法做出合理变动以进行滚动更新操作。
+  例如：maxSurage=1，replicas=5,则表示Kubernetes会先启动1一个新的Pod后才删掉一个旧的POD，整个升级过程中最多会有5+1个POD。
+
+- maxUnavailable ： 升级过程中最多有多少个POD处于无法提供服务的状态，可以是数量也可以是百分比。  
+
+  例如：maxUnavaible=1，则表示Kubernetes整个升级过程中最多会有1个POD处于无法服务的状态。
+
+==**注意：**==max Surge和max Unavailab 属性的值不可同时为0 ，否则 Pod对象的副本数量在符合用户期望的数量后无法做出合理变动以进行滚动更新操作。
 
 配置时，用户还可以使用 Deplpoyment 控制器的 `spec.minReadySeconds` 属性来控制应用升级的速度。Deployment 控制器也支持用户保留其滚动更新历史中的旧 ReplicaSet 对象版本，使用`Spec.revisionHistoryLimit`，进行定义保存历史版本数量。
 
@@ -503,7 +502,7 @@ Deployment 支持两种更新策略：滚动更新（ rolling update ）和重�
 
 
 
-尽管滚动更新以节约系统资源著称，但它也存在。直接改动现有环系统引人不确定性风险，而且升级过程出现问题后，执行回滚操作也 较为缓慢。有鉴于此， 金丝雀部署可能是较为理想的方式，当然，如果不考虑虑系统资源的可用性，那么传统的蓝绿部署也是不错的选择。
+尽管滚动更新以节约系统资源著称，但它也存在。直接改动现有系统引发不确定性风险，而且升级过程出现问题后，执行回滚操作也较为缓慢。有鉴于此， **金丝雀部署可能是较为理想的方式**，当然，如果不考虑虑系统资源的可用性，那么传统的蓝绿部署也是不错的选择。
 
 
 
@@ -906,7 +905,7 @@ spec:
 
 准备两套yaml文件
 
-
+vim  [nginx-deployment-v1.yaml](yaml\nginx-deployment-v1.yaml) 
 
 ```yaml
 apiVersion: apps/v1
@@ -958,9 +957,58 @@ spec:
             name: nginx
 ```
 
+vim  [nginx-deployment-v2.yaml](yaml\nginx-deployment-v2.yaml) 
 
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-v2
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+      version: "1.20.0"
+  replicas: 5
+  revisionHistoryLimit: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: "1.20.0"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nginx-deployment-v2
+          image: nginx:1.20.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 80
+            name: nginx
 
-
+```
 
 
 
@@ -974,28 +1022,180 @@ spec:
 
 金丝雀发布一般先发 1 台，或者一个小比例，例如 2% 的服务器，主要做流量验证用，也称为金丝雀 (Canary) 测试（国内常称灰度测试）。简单的金丝雀测试一般通过手工测试验证，复杂的金丝雀测试需要比较完善的监控基础设施配合，通过监控指标反馈，观察金丝雀的健康状况，作为后续发布或回退的依据。
 
+**（2）发布规则**
 
+在**更新时执行暂停（pause）或继续（resume）操作**，通过Service或Ingress资源和相关的路由策略将部分用户的请求流量引入到这些新的Pod之上进行发布验证，运行一段时间后，如果确定没有问题，即可使用`kubectl roollout resume`命令继续滚动更新过程。
 
-**（2）发布过程**
+**（3）发布过程**
 
 灰度发布／金丝雀发布由以下几个步骤组成：
-1、准备好部署各个阶段的工件，包括：构建工件，测试脚本，配置文件和部署清单文件。
-2、从负载均衡列表中移除掉“金丝雀”服务器。
-3、升级“金丝雀”应用（排掉原有流量并进行部署）。
-4、对应用进行自动化测试。
-5、将“金丝雀”服务器重新添加到负载均衡列表中（连通性和健康检查）。
-6、如果“金丝雀”在线使用测试成功，升级剩余的其他服务器。（否则就回滚）灰度发布可以保证整体系统的稳定，在初始灰度的时候就可以发现、调整问题，以保证其影响度。
+① 准备好部署各个阶段的工件，包括：构建工件，测试脚本，配置文件和部署清单文件。
+② 从负载均衡列表中移除掉“金丝雀”服务器。
+③ 升级“金丝雀”应用（排掉原有流量并进行部署）。
+④ 对应用进行自动化测试。
+⑤ 将“金丝雀”服务器重新添加到负载均衡列表中（连通性和健康检查）。
+⑥ 如果“金丝雀”在线使用测试成功，升级剩余的其他服务器。（否则就回滚）灰度发布可以保证整体系统的稳定，在初始灰度的时候就可以发现、调整问题，以保证其影响度。
 
 <img src="assets/aHR0cHM6Ly9.png" alt="aHR0cHM6Ly9" style="zoom:67%;" />
 
 
 
-（3）适用场景
-① 不停止老版本，额外搞一套新版本，不同版本应用共存。
+**（4）适用场景**
+① 不停止老版本，另外搞一套新版本，不同版本应用共存。
 ② 灰度发布中，常常按照用户设置路由权重，例如90%的用户维持使用老版本，10%的用户尝鲜新版本。
 ③ 经常与A/B测试一起使用，用于测试选择多种方案。AB test就是一种灰度发布方式，让一部分用户继续用A，一部分用户开始用B，如果用户对B没有什么反对意见，那么逐步扩大范围，把所有用户都迁移到B上面来。
 
+**（5）演示**
 
+vim  [nginx-deployment-v3.yaml](yaml\nginx-deployment-v3.yaml) 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-v3
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 5
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nginx
+          image: nginx:1.14.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 80
+            name: nginx
+```
+
+执行后，创建nginx为1.14.0版本；然后修改镜像版本为1.20.0后，进行更新：
+
+```bash
+$ kubectl create -f nginx-deployment-v3.yaml --record
+
+
+$ kubectl set image deployment/nginx-deployment-v3 nginx=nginx:1.20.0 && kubectl rollout pause deployment nginx-deployment-v3
+
+deployment.apps/nginx-deployment-v3 image updated
+deployment.apps/nginx-deployment-v3 paused
+
+
+
+$ kubectl get po|grep nginx-deployment-v3
+nginx-deployment-v3-69757888f8-87scw   1/1     Terminating         0          51s
+nginx-deployment-v3-69757888f8-fsvmz   0/1     ContainerCreating   0          1s
+nginx-deployment-v3-69757888f8-j4nd5   1/1     Running             0          51s
+nginx-deployment-v3-69757888f8-ktmvq   1/1     Running             0          51s
+nginx-deployment-v3-69757888f8-lhmzz   1/1     Running             0          51s
+nginx-deployment-v3-69757888f8-p7dwd   1/1     Running             0          51s
+nginx-deployment-v3-d756d5979-lsx4s    0/1     ContainerCreating   0          1s
+nginx-deployment-v3-d756d5979-lsxf9    0/1     ContainerCreating   0          1s
+
+#会发现原来的pod销毁1个，然后新建了3个新的pod；查看详细会发现，新旧版本的nginx共同运行。
+$ kubectl describe pod nginx-deployment-v3-d756d5979-6wx6c
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  2m10s  default-scheduler  Successfully assigned default/nginx-deployment-v3-d756d5979-6wx6c to k8s-master40
+  Normal  Pulled     2m8s   kubelet            Container image "nginx:1.20.0" already present on machine
+  Normal  Created    2m7s   kubelet            Created container nginx
+  Normal  Started    2m7s   kubelet            Started container nginx
+
+# 如果并行运行一段时间，发现没有问题需要继续执行如下命令更新全部pod
+
+$ kubectl rollout resume deployments nginx-deployment-v3
+$ kubectl get pod|grep nginx-deployment-v3
+nginx-deployment-v3-69757888f8-fsvmz   1/1     Terminating         0          3m51s
+nginx-deployment-v3-69757888f8-j4nd5   1/1     Terminating         0          4m41s
+nginx-deployment-v3-69757888f8-ktmvq   1/1     Running             0          4m41s
+nginx-deployment-v3-69757888f8-lhmzz   1/1     Terminating         0          4m41s
+nginx-deployment-v3-69757888f8-p7dwd   1/1     Running             0          4m41s
+nginx-deployment-v3-d756d5979-2nxsc    0/1     ContainerCreating   0          1s
+nginx-deployment-v3-d756d5979-lsx4s    1/1     Running             0          3m51s
+nginx-deployment-v3-d756d5979-lsxf9    1/1     Running             0          3m51s
+nginx-deployment-v3-d756d5979-qpzfv    0/1     ContainerCreating   0          1s
+nginx-deployment-v3-d756d5979-spfzj    0/1     ContainerCreating   0          1s
+
+ 
+# 验证镜像更新情况
+$ for i in `kubectl get pod|grep nginx-deployment-v3|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+
+#查看版本记录信息
+$ kubectl rollout history deployments nginx-deployment-v3
+$ kubectl rollout history deployments nginx-deployment-v3 --revision=2
+deployment.apps/nginx-deployment-v3 with revision #2
+Pod Template:
+  Labels:	app=nginx
+	pod-template-hash=d756d5979
+  Annotations:	kubernetes.io/change-cause: kubectl create --filename=nginx-deployment-v3.yaml --record=true
+  Containers:
+   nginx:
+    Image:	nginx:1.20.0
+    Port:	80/TCP
+    Host Port:	0/TCP
+    Liveness:	http-get http://:80/ delay=30s timeout=5s period=10s #success=1 #failure=3
+    Readiness:	http-get http://:80/ delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:	<none>
+    Mounts:	<none>
+  Volumes:	<none>
+
+$ kubectl rollout history deployments nginx-deployment-v3 --revision=1
+deployment.apps/nginx-deployment-v3 with revision #1
+Pod Template:
+  Labels:	app=nginx
+	pod-template-hash=69757888f8
+  Annotations:	kubernetes.io/change-cause: kubectl create --filename=nginx-deployment-v3.yaml --record=true
+  Containers:
+   nginx:
+    Image:	nginx:1.14.0
+    Port:	80/TCP
+    Host Port:	0/TCP
+    Liveness:	http-get http://:80/ delay=30s timeout=5s period=10s #success=1 #failure=3
+    Readiness:	http-get http://:80/ delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:	<none>
+    Mounts:	<none>
+  Volumes:	<none>
+
+# 如果发现版本有问题，也就是回退到--revision=1
+$ kubectl rollout undo deployment/nginx-deployment-v3 --to-revision=1
+$ for i in `kubectl get pod|grep nginx-deployment-v3|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
+nginx version: nginx/1.14.0
+nginx version: nginx/1.14.0
+nginx version: nginx/1.14.0
+nginx version: nginx/1.14.0
+nginx version: nginx/1.14.0
+
+```
 
 
 
@@ -1021,7 +1221,7 @@ spec:
 
 ⑤回退是发布的逆过程，将新版本流量从 LB 上摘除，清除新版本，发老版本，再将 LB 流量接入老版本。和发布过程一样，回退过程一般也比较慢的。
 
-⑥滚动式发布国外术语通常叫 Rolling Update Deployment。
+⑥滚动式发布国外术语通常叫 `Rolling Update Deployment`。
 
 
 
@@ -1040,6 +1240,104 @@ spec:
 
 - 用户体验不能中断的网站业务场景
 - 有一定的复杂发布工具研发能力；
+
+
+
+**（4）演示**
+
+vim  [nginx-deployment-v4.yaml](yaml\nginx-deployment-v4.yaml) 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-v4
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 5
+  #滚动升级策略
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: nginx
+          image: nginx:1.14.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 80
+            name: nginx
+
+
+```
+
+执行：
+
+```bash
+$ kubectl create -f nginx-deployment-v4.yaml --record
+$ kubectl set image deployment/nginx-deployment-v4 nginx=nginx:1.20.0 && kubectl rollout pause deployment nginx-deployment-v4
+$ for i in `kubectl get pod|grep nginx-deployment-v4|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+nginx version: nginx/1.20.0
+
+#回滚与上边的发布方式一样。
+```
+
+- minReadySeconds：Kubernetes在等待设置的时间后才进行升级
+  - 如果没有设置该值，Kubernetes会假设该容器启动起来后就提供服务了
+  - 如果没有设置该值，在某些极端情况下可能会造成服务不正常运行
+- maxSurge：升级过程中最多可以比原先设置多出的POD数量
+  - 例如：maxSurage=1，replicas=5,则表示Kubernetes会先启动1一个新的Pod后才删掉一个旧的POD，整个升级过程中最多会有5+1个POD。
+- maxUnavaible：升级过程中最多有多少个POD处于无法提供服务的状态
+  - 当maxSurge不为0时，该值也不能为0。
+  - 例如：maxUnavaible=1，则表示Kubernetes整个升级过程中最多会有1个POD处于无法服务的状态。
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

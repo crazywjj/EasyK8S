@@ -34,10 +34,6 @@
 </table>
 
 
-
-
-
-
 # 三 数据存储
 
 主要包含volume存储卷类型、PV资源池、PVC资源请求、共享存储NFS使用、StorageClass类存储、GlusterFS 持久化存储等。
@@ -50,8 +46,6 @@
    <td><a href="数据存储/GlusterFS持久化存储.md">GlusterFS 持久化存储</a></td>
     </tr>
 </table>
-
-
 
 
 # 四 Pod与控制器
@@ -72,21 +66,7 @@
 </table>
 
 
-
-
-
-
-
-
-
-
 # 五 Service与服务发现
-
-
-
-
-
-
 
 
 
@@ -94,23 +74,7 @@
 
 
 
-
-
-
-
-
-
 # 七 周边生态
-
-
-
-
-
-
-
-
-
-
 
 <table border="0">
 <tr>
@@ -126,18 +90,6 @@
    <td><a href="Kubernetes学习/02-kubernetes的基本概念.md">02-kubernetes的基本概念</a></td>
 </tr>
 </table>
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # 附录

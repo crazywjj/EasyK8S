@@ -1,9 +1,5 @@
 [TOC]
 
-[TOC]
-
-
-
 # Pod资源管理与QoS
 
 当你定义 Pod 时可以选择性地为每个容器设定所需要的资源数量。 最常见的可设定资源是 CPU 和内存（RAM）大小；此外还有其他类型的资源。
@@ -112,7 +108,7 @@ Events:
 
 vim  [memory-demo.yaml](yaml\memory-demo.yaml) 
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
