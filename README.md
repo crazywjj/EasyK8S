@@ -64,32 +64,16 @@
 
 
 
+
+
 # 三 数据存储
 
-<!DOCTYPE html>
-<html>
- <head> 
-  <meta charset="utf-8" /> 
-  <title>数据存储</title> 
-  <style>
-table, td, th
-{
-	border:1px solid green;
-}
-th
-{
-	background-color:green;
-	color:white;
-}
-</style> 
- </head> 
- <body> 
-  <table> 
+<table cellpadding="2" border="1">
    <tbody>
     <tr> 
-     <th>序号</th> 
-     <th>标题</th> 
-     <th>主要内容</th> 
+     <th bgcolor="green">序号</th> 
+     <th bgcolor="green">标题</th> 
+     <th bgcolor="green">主要内容</th> 
     </tr> 
     <tr> 
      <td>1</td> 
@@ -112,9 +96,8 @@ th
      <td>包含GlusterFS介绍、集群搭建、手动挂载使用GlusterFS过程、GlusterFS+Heketi+StorageClass动态挂载使用</td> 
     </tr> 
    </tbody>
-  </table>  
- </body>
-</html>
+</table>
+
 
 
 
@@ -122,32 +105,14 @@ th
 
 # 四 Pod与控制器
 
-<!DOCTYPE html>
-<html>
- <head> 
-  <meta charset="utf-8" /> 
-  <title>Pod与控制器</title> 
-  <style>
-table, td, th
-{
-	border:1px solid green;
-}
-th
-{
-	background-color:green;
-	color:white;
-}
-</style> 
- </head> 
- <body> 
-  <table> 
+<table cellpadding="2" border="1">
    <tbody>
     <tr> 
-     <th>序号</th> 
-     <th>标题</th> 
-     <th>主要内容</th> 
+     <th bgcolor="green">序号</th> 
+     <th bgcolor="green">标题</th> 
+     <th bgcolor="green">主要内容</th> 
     </tr> 
-    <tr> 
+ <tr> 
      <td>1</td> 
      <td><a href="Pod与控制器/Pod介绍.md">Pod介绍</a></td> 
      <td>包含Pod概念、组成、定义和基本用法、静态Pod、Pod故障归类与排除方法</td> 
@@ -178,9 +143,8 @@ th
      <td>包含Pod控制器概述、RC和RC、Deployment、DaemonSet、StatefulSet、Job、CronJob等控制器</td> 
     </tr> 
    </tbody>
-  </table>  
- </body>
-</html>
+</table>
+
 
 
 
