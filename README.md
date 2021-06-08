@@ -20,7 +20,7 @@
     <tr>
      <td>1</td>
      <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td>
-     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td>
+     <td>包含kubernetes是什么、组件、工作流程、主要功能和优势</td>
      </tr>
    </tbody>
 </table>
