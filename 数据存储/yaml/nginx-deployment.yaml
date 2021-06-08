@@ -6,11 +6,11 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      name: nginx
+      name: nginx-deployment
   template:
     metadata:
       labels:
-        name: nginx
+        name: nginx-deployment
     spec:
       containers:
         - name: nginx

@@ -980,7 +980,7 @@ statefulset是为了解决**有状态服务**，而其它的资源类型（RC、
 
 5、有序的滚动更新
 
-StatefulSet 通常由三个组件构成 `Headless Service`、`StatefulSet`和`volumeClaimTemplate`。
+StatefulSet 通常由**三个组件构成**： `Headless Service`、`StatefulSet`和`volumeClaimTemplate`。
 
 -  Headless Service 用于为 Pod 资源标识符生成可解析的 DNS 资源记录
 - StatefulSet 用于管控 Pod 资源
@@ -988,47 +988,151 @@ StatefulSet 通常由三个组件构成 `Headless Service`、`StatefulSet`和`vo
 
 
 
+**StatefulSet的特性：**
+
+- StatefulSet里的每个Pod都有稳定、唯一的网络标识，可以用来发现集群内的其他成员。假设StatefulSet的名称为kafka，那么第1 个Pod叫kafka-0，第2个叫kafka-1，以此类推。 
+- StatefulSet控制的Pod副本的启停顺序是受控的，操作第n个Pod时，前n-1个Pod已经是运行且准备好的状态。 
+- StatefulSet里的Pod采用稳定的持久化存储卷，通过PV或 PVC来实现，删除Pod时默认不会删除与StatefulSet相关的存储卷
 
 
 
 
 
+## 5.1 创建 StatefulSet 对象
+
+如上所述；一个完整的 StatefulSet 由 `Headless Service`、`StatefulSet`和`volumeClaimTemplate`组成。
+
+> **==注意：==**本次测试使用动态的PV供给方式，确保系统中已经有可用的storageclasses。
+
+```bash
+$ kubectl get sc
+NAME                         PROVISIONER               RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+glusterfs-heketi (default)   kubernetes.io/glusterfs   Delete          Immediate           true                   16d
+
+```
 
 
 
+vim  [nginx-statefulset.yaml](yaml\nginx-statefulset.yaml) 
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  serviceName: "nginx"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: www
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:      # PVC动态请求模板
+  - metadata:
+      name: www
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "glusterfs-heketi"
+      resources:
+        requests:
+          storage: 20Gi
+
+```
+
+- `volumeClaimTemplates`：表示一类PVC的模板，系统会根据有状态服务-StatefulSet配置的replicas数量，创建相应数量的PVC。这些PVC除了名字不一样之外其他配置都是一样的。
+
+- storageClassName值和storage大小，需要符合storageClass。名称不一样或者statefulset中的storage大于storageClass都会创建失败。
+- 定义 StatefulSet 时， spec 中必须要嵌套字段为 `serviceName`和`template`，用于指定关联的 Headless Service 和要使用的 Pod 模板。 
 
 
 
+执行：
+
+```bash
+$ kubectl create -f nginx-statefulset.yaml
+```
+
+> ==**注意：**==Deployment控制器没有volumeClaimTemplates这个FIELDS，可以查看对比`kubectl explain StatefulSet.spec`和`kubectl explain Deployment.spec`
+
+默认情况下，StatefulSet 控制器以串行的方式创建各 Pod 副本，如果想要以并行方式创建和删除Pod资源，则可以设 `spec podManagementPolicy` 段的值为 `Parallel `，默认为“`OrderedReady `。使用默认的顺认创建策略时，观察 Pod资源生成过程。
+
+```bash
+$ kubectl get pod -w -l app=nginx
+web-0   0/1     Pending       0          0s
+web-0   0/1     Pending       0          0s
+web-0   0/1     ContainerCreating   0          0s
+web-0   1/1     Running             0          10s
+web-1   0/1     Pending             0          0s
+web-1   0/1     Pending             0          0s
+web-1   0/1     ContainerCreating   0          0s
+web-1   1/1     Running             0          14s
+
+```
 
 
 
+## 5.2 StatefulSet服务伸缩
 
+```bash
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+web-0                                     1/1     Running   0          6m41s
+web-1                                     1/1     Running   0          6m38s
+# kubectl scale sts web --replicas=3
 
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+web-0                                     1/1     Running   0          7m3s
+web-1                                     1/1     Running   0          7m
+web-2                                     1/1     Running   0          14s
+# kubectl scale sts web --replicas=2
 
+# kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+web-0                                     1/1     Running   0          7m31s
+web-1                                     1/1     Running   0          7m28s
+# kubectl get  pv,pvc
+NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                 STORAGECLASS   REASON   AGE
+persistentvolume/pvc-180ad7b3-8dbb-41aa-b464-eb1a48c848ca   20Gi       RWO            Delete           Bound       default/nginx-web-2   web                     7m36s
+persistentvolume/pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            Delete           Bound       default/nginx-web-0   web                     43m
+persistentvolume/pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            Delete           Bound       default/nginx-web-1   web                     41m
+persistentvolume/web-pv                                     20Gi       RWX            Retain           Available                         web                     42m
 
+NAME                                STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/nginx-web-0   Bound    pvc-4f849d4b-e9aa-4b9f-b84d-927d445300ff   20Gi       RWO            web            54m
+persistentvolumeclaim/nginx-web-1   Bound    pvc-ad989c84-8dd7-4188-b4c1-f27cb41cf09d   20Gi       RWO            web            41m
+persistentvolumeclaim/nginx-web-2   Bound    pvc-180ad7b3-8dbb-41aa-b464-eb1a48c848ca   20Gi       RWO            web            7m37s
 
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+发现PVC和PV并没有随Pod一起缩减，扩容后新创建的Pod仍会使用原来的PVC和PV。
 
 
 
@@ -1050,559 +1154,154 @@ StatefulSet 通常由三个组件构成 `Headless Service`、`StatefulSet`和`vo
 
 # 6 Job 控制器
 
-与Deployment、DaemonSet 控制器管理的守护进程类的服务应用不同的是， Job 控制器用于**调配 Pod 对象运行一次性任务**，容器中的进程在正常运行结束后不会对其进行重启，而是将 Pod 象置于`Completed`状态。
+与Deployment、DaemonSet 控制器管理的守护进程类的服务应用不同的是，Job负责批量处理短暂的一次性任务，即仅执行一次任务，它保证批处理任务的一个或多个Pod成功结束。容器中的进程在正常运行结束后不会对其进行重启，而是将 Pod 象置于`Completed`状态。
 
-若容器中的进程因错误而终止，则需要依配置确定是否重启（ **Job的restartPolicy（重启策略）**只能设置为 **Never** 或者 **OnFailure**），未运行完成的 Pod 对象因其所在的节点故障而意外终止后会被重新调度。
 
 
+Kubernetes支持以下几种Job：
 
+- 非并行Job：通常创建一个Pod直至其成功结束
+- 固定结束次数的Job：设置`.spec.completions`，创建多个Pod，直到`.spec.completions`个Pod成功结束
+- 带有工作队列的并行Job：设置`.spec.Parallelism`但不设置`.spec.completions`，当所有Pod结束并且至少一个成功时，Job就认为是成功
 
+根据.spec.completions和.spec.Parallelism的设置，可以将Job划分为以下几种pattern：
 
+| Job类型               | 使用示例                | 行为                                         | completions | Parallelism |
+| :-------------------- | :---------------------- | :------------------------------------------- | :---------- | :---------- |
+| 一次性Job             | 数据库迁移              | 创建一个Pod直至其成功结束                    | 1           | 1           |
+| 固定结束次数的Job     | 处理工作队列的Pod       | 依次创建一个Pod运行直至completions个成功结束 | 2+          | 1           |
+| 固定结束次数的并行Job | 多个Pod同时处理工作队列 | 依次创建多个Pod运行直至completions个成功结束 | 2+          | 2+          |
+| 并行Job               | 多个Pod同时处理工作队列 | 创建一个或多个Pod直至有一个成功结束          | 1           | 2+          |
 
 
 
+## 6.1 创建一次性Job
 
+job控制器的spec字段内嵌的必要字段仅为template，它的使用方式与Deployment等控制器相同。job会为其pod对象自动添加 `job-name=JOB_NAME`和 `controller-uid=UID` 标签，并使用标签选择器完成对`controller-uid`标签的关联。job位于API群组`batch/v1`之内。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 企业常见几种发布方式
-
-**前言**
-
-在软件上线之前，不可避免地要对软件的正确性、可靠性进行测试，又不希望停机维护、不影响用户体验，并且在新版本出现问题的时候能够及时回退。所以，需要有一套完整的部署方案，灰度发布、滚动发布、蓝绿部署都是常见的手段，而A/B测试则是对用户体验进行调查的测试手段，这里一并学习。
-
-## 蓝绿发布
-
-**（1）定义**
-
-蓝绿部署是不停老版本，部署新版本然后进行测试。确认OK后将流量切到新版本，然后老版本同时也升级到新版本。
-
-**（2）特点**
-
-蓝绿部署无需停机，并且风险较小。
-
-**（3）优势和不足**
-
-- 优势
-  升级切换和回退速度非常快。
-- 不足
-  切换是全量的，如果V2版本有问题，则对用户体验有直接影响。需要两倍机器资源。
-
-**（4）发布过程**
-
-①蓝绿发布的初始状态是两组服务器（简单理解为蓝色和绿色）都提供服务，且版本一致为v1。
-
-<img src="assets/image-20210604103840172.png" alt="image-20210604103840172" style="zoom:67%;" />
-
-
-
-
-
-②着步将蓝色服务器流量引向绿色服务器，直至全部流量都切换至绿色服务器，蓝色服务器不再提供任何服务；
-
-<img src="assets/image-20210604104018570.png" alt="image-20210604104018570" style="zoom:67%;" />
-
-
-
-③开始升级蓝色服务器的应用为v2，版本 v2 与 v1 不同(新功能、Bug修复等)；然后再将绿色服务器流量着步全量切换至蓝色服务器，直至绿色服务器不提供服务；
-
-<img src="assets/image-20210604104405186.png" alt="image-20210604104405186" style="zoom:67%;" />
-
-④两个版本并行运行一段时间，但是只有蓝色v2的应用提供服务，如果版本v2测试正常；就将绿色v1版本的应用升级至v2，并将部分流量重新引向绿色服务器，从而实现两组服务器提供v2版本的服务。如果v2测试异常，绿色v1版本不升级，并将流量迅速切换至绿色v1应用。
-
-<img src="assets/image-20210604104833830.png" alt="image-20210604104833830" style="zoom:67%;" />
-
-**（5）演示**
-
-准备两套yaml文件
-
-vim  [nginx-deployment-v1.yaml](yaml\nginx-deployment-v1.yaml) 
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-deployment-v1
-spec:
-  selector:
-    matchLabels:
-      app: nginx
-      version: "1.14.0"
-  replicas: 5
-  revisionHistoryLimit: 10
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 3
-  template:
-    metadata:
-      labels:
-        app: nginx
-        version: "1.14.0"
-    spec:
-      terminationGracePeriodSeconds: 60
-      containers:
-        - name: nginx-deployment-v1
-          image: nginx:1.14.0
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          ports:
-          - containerPort: 80
-            name: nginx
-```
-
-vim  [nginx-deployment-v2.yaml](yaml\nginx-deployment-v2.yaml) 
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-deployment-v2
-spec:
-  selector:
-    matchLabels:
-      app: nginx
-      version: "1.20.0"
-  replicas: 5
-  revisionHistoryLimit: 10
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 3
-  template:
-    metadata:
-      labels:
-        app: nginx
-        version: "1.20.0"
-    spec:
-      terminationGracePeriodSeconds: 60
-      containers:
-        - name: nginx-deployment-v2
-          image: nginx:1.20.0
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          ports:
-          - containerPort: 80
-            name: nginx
+vim  [myjob-v1.yaml](yaml\myjob-v1.yaml) 
 
 ```
-
-
-
-
-
-## 灰度发布/金丝雀发布
-
-**（1）定义**
-
-金丝雀发布是能够平滑过渡的一种发布方式，也是增量发布的一种类型，是在原有版本可用的情况下，同时部署一个新版本应用作为“金丝雀”，测试新版本的性能和表现，以保障整体系统稳定的情况下，尽早发现、调整问题。
-
-金丝雀发布一般先发 1 台，或者一个小比例，例如 2% 的服务器，主要做流量验证用，也称为金丝雀 (Canary) 测试（国内常称灰度测试）。简单的金丝雀测试一般通过手工测试验证，复杂的金丝雀测试需要比较完善的监控基础设施配合，通过监控指标反馈，观察金丝雀的健康状况，作为后续发布或回退的依据。
-
-**（2）发布规则**
-
-在**更新时执行暂停（pause）或继续（resume）操作**，通过Service或Ingress资源和相关的路由策略将部分用户的请求流量引入到这些新的Pod之上进行发布验证，运行一段时间后，如果确定没有问题，即可使用`kubectl roollout resume`命令继续滚动更新过程。
-
-**（3）发布过程**
-
-灰度发布／金丝雀发布由以下几个步骤组成：
-① 准备好部署各个阶段的工件，包括：构建工件，测试脚本，配置文件和部署清单文件。
-② 从负载均衡列表中移除掉“金丝雀”服务器。
-③ 升级“金丝雀”应用（排掉原有流量并进行部署）。
-④ 对应用进行自动化测试。
-⑤ 将“金丝雀”服务器重新添加到负载均衡列表中（连通性和健康检查）。
-⑥ 如果“金丝雀”在线使用测试成功，升级剩余的其他服务器。（否则就回滚）灰度发布可以保证整体系统的稳定，在初始灰度的时候就可以发现、调整问题，以保证其影响度。
-
-<img src="assets/aHR0cHM6Ly9.png" alt="aHR0cHM6Ly9" style="zoom:67%;" />
-
-
-
-**（4）适用场景**
-① 不停止老版本，另外搞一套新版本，不同版本应用共存。
-② 灰度发布中，常常按照用户设置路由权重，例如90%的用户维持使用老版本，10%的用户尝鲜新版本。
-③ 经常与A/B测试一起使用，用于测试选择多种方案。AB test就是一种灰度发布方式，让一部分用户继续用A，一部分用户开始用B，如果用户对B没有什么反对意见，那么逐步扩大范围，把所有用户都迁移到B上面来。
-
-**（5）演示**
-
-vim  [nginx-deployment-v3.yaml](yaml\nginx-deployment-v3.yaml) 
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion:  batch/v1
+kind: Job
 metadata:
-  name: nginx-deployment-v3
+  name: myjob-v1
 spec:
-  selector:
-    matchLabels:
-      app: nginx
-  replicas: 5
-  revisionHistoryLimit: 10
   template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      terminationGracePeriodSeconds: 60
-      containers:
-        - name: nginx
-          image: nginx:1.14.0
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          ports:
-          - containerPort: 80
-            name: nginx
+     spec:
+        containers:
+            - name: job
+              image: busybox
+              command: ["echo","hello k8s world!"]
+        restartPolicy: Never
 ```
 
-执行后，创建nginx为1.14.0版本；然后修改镜像版本为1.20.0后，进行更新：
+执行后验证：
 
 ```bash
-$ kubectl create -f nginx-deployment-v3.yaml --record
+$ kubectl create -f myjob-v1.yaml
+$ kubectl get job
+NAME       COMPLETIONS   DURATION   AGE
+myjob-v1   1/1           9s         35m
 
+$ kubectl get pod -l job-name=myjob-v1
+NAME             READY   STATUS      RESTARTS   AGE
+myjob-v1-qxkhr   0/1     Completed   0          21s
 
-$ kubectl set image deployment/nginx-deployment-v3 nginx=nginx:1.20.0 && kubectl rollout pause deployment nginx-deployment-v3
+$ kubectl logs myjob-v1-wzlzr
+hello k8s world!
 
-deployment.apps/nginx-deployment-v3 image updated
-deployment.apps/nginx-deployment-v3 paused
+$  kubectl describe jobs myjob-v1
 
-
-
-$ kubectl get po|grep nginx-deployment-v3
-nginx-deployment-v3-69757888f8-87scw   1/1     Terminating         0          51s
-nginx-deployment-v3-69757888f8-fsvmz   0/1     ContainerCreating   0          1s
-nginx-deployment-v3-69757888f8-j4nd5   1/1     Running             0          51s
-nginx-deployment-v3-69757888f8-ktmvq   1/1     Running             0          51s
-nginx-deployment-v3-69757888f8-lhmzz   1/1     Running             0          51s
-nginx-deployment-v3-69757888f8-p7dwd   1/1     Running             0          51s
-nginx-deployment-v3-d756d5979-lsx4s    0/1     ContainerCreating   0          1s
-nginx-deployment-v3-d756d5979-lsxf9    0/1     ContainerCreating   0          1s
-
-#会发现原来的pod销毁1个，然后新建了3个新的pod；查看详细会发现，新旧版本的nginx共同运行。
-$ kubectl describe pod nginx-deployment-v3-d756d5979-6wx6c
-Events:
-  Type    Reason     Age    From               Message
-  ----    ------     ----   ----               -------
-  Normal  Scheduled  2m10s  default-scheduler  Successfully assigned default/nginx-deployment-v3-d756d5979-6wx6c to k8s-master40
-  Normal  Pulled     2m8s   kubelet            Container image "nginx:1.20.0" already present on machine
-  Normal  Created    2m7s   kubelet            Created container nginx
-  Normal  Started    2m7s   kubelet            Started container nginx
-
-# 如果并行运行一段时间，发现没有问题需要继续执行如下命令更新全部pod
-
-$ kubectl rollout resume deployments nginx-deployment-v3
-$ kubectl get pod|grep nginx-deployment-v3
-nginx-deployment-v3-69757888f8-fsvmz   1/1     Terminating         0          3m51s
-nginx-deployment-v3-69757888f8-j4nd5   1/1     Terminating         0          4m41s
-nginx-deployment-v3-69757888f8-ktmvq   1/1     Running             0          4m41s
-nginx-deployment-v3-69757888f8-lhmzz   1/1     Terminating         0          4m41s
-nginx-deployment-v3-69757888f8-p7dwd   1/1     Running             0          4m41s
-nginx-deployment-v3-d756d5979-2nxsc    0/1     ContainerCreating   0          1s
-nginx-deployment-v3-d756d5979-lsx4s    1/1     Running             0          3m51s
-nginx-deployment-v3-d756d5979-lsxf9    1/1     Running             0          3m51s
-nginx-deployment-v3-d756d5979-qpzfv    0/1     ContainerCreating   0          1s
-nginx-deployment-v3-d756d5979-spfzj    0/1     ContainerCreating   0          1s
-
- 
-# 验证镜像更新情况
-$ for i in `kubectl get pod|grep nginx-deployment-v3|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-
-#查看版本记录信息
-$ kubectl rollout history deployments nginx-deployment-v3
-$ kubectl rollout history deployments nginx-deployment-v3 --revision=2
-deployment.apps/nginx-deployment-v3 with revision #2
-Pod Template:
-  Labels:	app=nginx
-	pod-template-hash=d756d5979
-  Annotations:	kubernetes.io/change-cause: kubectl create --filename=nginx-deployment-v3.yaml --record=true
-  Containers:
-   nginx:
-    Image:	nginx:1.20.0
-    Port:	80/TCP
-    Host Port:	0/TCP
-    Liveness:	http-get http://:80/ delay=30s timeout=5s period=10s #success=1 #failure=3
-    Readiness:	http-get http://:80/ delay=15s timeout=5s period=10s #success=1 #failure=3
-    Environment:	<none>
-    Mounts:	<none>
-  Volumes:	<none>
-
-$ kubectl rollout history deployments nginx-deployment-v3 --revision=1
-deployment.apps/nginx-deployment-v3 with revision #1
-Pod Template:
-  Labels:	app=nginx
-	pod-template-hash=69757888f8
-  Annotations:	kubernetes.io/change-cause: kubectl create --filename=nginx-deployment-v3.yaml --record=true
-  Containers:
-   nginx:
-    Image:	nginx:1.14.0
-    Port:	80/TCP
-    Host Port:	0/TCP
-    Liveness:	http-get http://:80/ delay=30s timeout=5s period=10s #success=1 #failure=3
-    Readiness:	http-get http://:80/ delay=15s timeout=5s period=10s #success=1 #failure=3
-    Environment:	<none>
-    Mounts:	<none>
-  Volumes:	<none>
-
-# 如果发现版本有问题，也就是回退到--revision=1
-$ kubectl rollout undo deployment/nginx-deployment-v3 --to-revision=1
-$ for i in `kubectl get pod|grep nginx-deployment-v3|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
-nginx version: nginx/1.14.0
-nginx version: nginx/1.14.0
-nginx version: nginx/1.14.0
-nginx version: nginx/1.14.0
-nginx version: nginx/1.14.0
-
+Name:           myjob-v1
+Namespace:      default
+Selector:       controller-uid=3e2d0733-8411-43e2-9336-077b5b7cf4ec
+Labels:         controller-uid=3e2d0733-8411-43e2-9336-077b5b7cf4ec
+                job-name=myjob-v1
+Annotations:    <none>
+Parallelism:    1
+Completions:    1
+Start Time:     Tue, 08 Jun 2021 11:02:53 +0800
+Completed At:   Tue, 08 Jun 2021 11:03:06 +0800
+Duration:       13s
+Pods Statuses:  0 Running / 1 Succeeded / 0 Failed
 ```
 
 
 
-## 滚动发布
-
-在金丝雀发布基础上的进一步优化改进，是一种自动化程度较高的发布方式，用户体验比较平滑，是目前成熟型技术组织所采用的主流发布方式。
-
-**（1）定义**
-
-滚动发布，一般是取出一个或者多个服务器停止服务，执行更新，并重新将其投入使用。周而复始，直到集群中所有的实例都更新成新版本。这种部署方式相对于蓝绿部署，更加节约资源——它不需要运行两个集群、两倍的实例数。我们可以部分部署，例如每次只取出集群的20%进行升级。
+> ==**注意：**==Job的RestartPolicy（重启策略）仅支持Never和OnFailure两种，不支持Always，Job就相当于来执行一个批处理任务，执行完就结束了，如果支持Always的话会陷入了死循环了。
 
 
 
-**（2）发布过程**
+## 6.2 创建并行式Job
 
-①滚动式发布一般先发 1 台，或者一个小比例，如 2% 服务器，主要做流量验证用，类似金丝雀 (Canary) 测试。
+将并行度属性`spec.parallelism`的值设置为2，并设置总任务数`spec.completion`属性便能够让job控制器以串行方式运行多任务：
 
-②滚动式发布需要比较复杂的发布工具和智能 LB，支持平滑的版本替换和流量拉入拉出。
-
-③每次发布时，先将老版本 V1 流量从 LB 上摘除，然后清除老版本，发新版本 V2，再将 LB 流量接入新版本。这样可以尽量保证用户体验不受影响。
-
-④一次滚动式发布一般由若干个发布批次组成，每批的数量一般是可以配置的（可以通过发布模板定义）。例如第一批 1 台（金丝雀），第二批 10%，第三批 50%，第四批 100%。每个批次之间留观察间隔，通过手工验证或监控反馈确保没有问题再发下一批次，所以总体上滚动式发布过程是比较缓慢的 (其中金丝雀的时间一般会比后续批次更长，比如金丝雀 10 分钟，后续间隔 2 分钟)。
-
-⑤回退是发布的逆过程，将新版本流量从 LB 上摘除，清除新版本，发老版本，再将 LB 流量接入老版本。和发布过程一样，回退过程一般也比较慢的。
-
-⑥滚动式发布国外术语通常叫 `Rolling Update Deployment`。
-
-
-
-**（3）优势和适用场合**
-
-**优势：**
-
-- 用户体验影响小，体验较平滑
-
-**不足：**
-
-- 发布和回退时间比较缓慢
-- 发布工具比较复杂，LB 需要平滑的流量摘除和拉入能力
-
-**适用场合：**
-
-- 用户体验不能中断的网站业务场景
-- 有一定的复杂发布工具研发能力；
-
-
-
-**（4）演示**
-
-vim  [nginx-deployment-v4.yaml](yaml\nginx-deployment-v4.yaml) 
+vim [myjob-v2.yaml](yaml\myjob-v2.yaml) 
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: nginx-deployment-v4
+  name: myjob-v2
 spec:
-  selector:
-    matchLabels:
-      app: nginx
-  replicas: 5
-  #滚动升级策略
-  minReadySeconds: 5
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1
-  revisionHistoryLimit: 10
+  completions: 5
+  parallelism: 2
+  backoffLimit: 5
+  activeDeadlineSeconds: 100
   template:
-    metadata:
-      labels:
-        app: nginx
     spec:
-      terminationGracePeriodSeconds: 60
       containers:
-        - name: nginx
-          image: nginx:1.14.0
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-              scheme: HTTP
-            initialDelaySeconds: 15
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          ports:
-          - containerPort: 80
-            name: nginx
-
-
+      - name: myjob
+        image: alpine
+        command: ["/bin/sh", "-c", "sleep 120"]
+      restartPolicy: OnFailure
 ```
 
-执行：
 
-```bash
-$ kubectl create -f nginx-deployment-v4.yaml --record
-$ kubectl set image deployment/nginx-deployment-v4 nginx=nginx:1.20.0 && kubectl rollout pause deployment nginx-deployment-v4
-$ for i in `kubectl get pod|grep nginx-deployment-v4|awk '{print $1}'`;do kubectl exec -it $i -- nginx -v;done
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
-nginx version: nginx/1.20.0
 
-#回滚与上边的发布方式一样。
+## 6.3 Job扩容与删除
+
+job控制器的`spec.parallelism`定义的并行度表示同时运行的pod对象数，此属性值支持运行时调整从而改变其队列总数，实现扩容和缩容。使用`kubectl scale --replicas`命令即可。
+
+job控制器待其pod资源运行完成后，将不再占用系统资源，用户可按需保留或使用资源删除命令将其删除。如果job控制器的容器应用总是无法正常结束运行，而restartPolicy又定义了重启，则它可能会一直处于不停地重启和错误的循环中：
+
+`spec.activeDeadlineSeconds`：job的deadline，用于为其指定最大活动时间长度，超出此时长的作业将被终止
+
+`spec.backoffLimit`: 将作业标记为失败状态之前的重试次数，默认值为6。
+
+如上边示例配置中，其失败重试次数为5次，并且如果超出100s时间仍未运行完成，那么其将被终止。
+
+
+
+
+
+# 7 CronJob控制器
+
+Kubernetes从1.5版本开始增加了一种新类型的Job，即类似Linux Cron的定时任务CronJob。
+
+一个CronJob对象其实就对应crontab文件中的一行，它根据配置的时间格式周期性地运行一个Job，格式和crontab也是一样的。
+
+
+
+## 7.1 创建CronJob对象
+
+CronJob 控制器的 spec 字段可嵌套使用以下字段：
+
+- `jobTemplate <Object> `: Job 控制器模板，用于为 CronJob 控制器生成 Job 对象；必选字段。
+- `schedule <string>`: Cron 格式的作业调度运行时间点；必选字段。
+- `concurrencyPolicy <string>`：并发执行策略，可用值有“ Allow （允许）、“ Forbid ”（禁止）和“ Replace ”（替换） 用于定义前一次作业运行尚未完成时是否以及如何运行后一次的作业。
+- `failedJobHistoryLimit <integer>` ：为失败的任务执行保留的历史记录数，默认为1。
+- `successfullJobsHistoryLimit <integer>`：为成功的任务执行保留的历史记录数，默认为3。
+- `startingDeadlineSeconds <integer>`：因各种原因缺乏执行作业的时间点所导致的启动作业错误的超时时－长，会被记入错误历史记录
+- `suspend <boolean>`：是否挂起后 的任务执行， 默认为 false ，对运行中的作业不会产生影响。
+
+通过如下命令获取以上FIELDS详细：
+
+```
+kubectl explain cronjob.spec
 ```
 
-- minReadySeconds：Kubernetes在等待设置的时间后才进行升级
-  - 如果没有设置该值，Kubernetes会假设该容器启动起来后就提供服务了
-  - 如果没有设置该值，在某些极端情况下可能会造成服务不正常运行
-- maxSurge：升级过程中最多可以比原先设置多出的POD数量
-  - 例如：maxSurage=1，replicas=5,则表示Kubernetes会先启动1一个新的Pod后才删掉一个旧的POD，整个升级过程中最多会有5+1个POD。
-- maxUnavaible：升级过程中最多有多少个POD处于无法提供服务的状态
-  - 当maxSurge不为0时，该值也不能为0。
-  - 例如：maxUnavaible=1，则表示Kubernetes整个升级过程中最多会有1个POD处于无法服务的状态。
-
-
-
-
-
-## A/B测试
-
-首先需要明确的是，A/B测试和蓝绿部署以及金丝雀，完全是两回事。
-
-蓝绿部署和金丝雀是发布策略，目标是确保新上线的系统稳定，关注的是新系统的BUG、隐患。
-
-A/B测试是效果测试，同一时间有多个版本的服务对外服务，这些服务都是经过足够测试，达到了上线标准的服务，有差异但是没有新旧之分（它们上线时可能采用了蓝绿部署的方式）。
-
-A/B测试关注的是不同版本的服务的实际效果，譬如说转化率、订单情况等。
-
-A/B测试时，线上同时运行多个版本的服务，这些服务通常会有一些体验上的差异，譬如说页面样式、颜色、操作流程不同。相关人员通过分析各个版本服务的实际效果，选出效果最好的版本。
-
-![abtesting](assets/abtesting.png)
-
-在A/B测试中，需要能够控制流量的分配，譬如说，为A版本分配10%的流量，为B版本分配10%的流量，为C版本分配80%的流量。
-
-参考：
-
-1. [Blue-green Deployments, A/B Testing, and Canary Releases](http://blog.christianposta.com/deploy/blue-green-deployments-a-b-testing-and-canary-releases/)
-2. [BlueGreenDeployment](https://martinfowler.com/bliki/BlueGreenDeployment.html)
-3. https://help.aliyun.com/document_detail/85948.html
 
 
 

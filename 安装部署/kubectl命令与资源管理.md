@@ -116,7 +116,7 @@ Use "kubectl options" for a list of global command-line options (applies to all 
 | run      | 在集群中运行一个特定的镜像                                   |
 | get      | 显示一个或者多个资源（资源分为pod、instance、service等）     |
 | set      | 在对象上设置特定的功能                                       |
-| explain  | 文档参考资料                                                 |
+| explain  | 资源文档参考资料                                             |
 | edit     | 使用默认的编辑器编辑一个资源                                 |
 | delete   | 通过文件名、标准输入、资源名称，或标签来删除资源             |
 
@@ -128,8 +128,6 @@ kubectl create -f my-nginx.yaml
 kubectl run nginx --image=nginx:1.16 --port=80 --replicas=1
 kubectl expose deployment/nginx  --type="NodePort" --port=80 --name=nginx
 kubectl get cs                          # 查看集群状态
-kubectl get nodes                       # 查看集群节点信息
-kubectl get ns                          # 查看集群命名空间
 kubectl get svc -n kube-system          # 查看指定命名空间的服务
 kubectl get pod <pod-name> -o wide      # 查看Pod详细信息
 kubectl get pod <pod-name> -o yaml      # 以yaml格式查看Pod详细信息
@@ -137,6 +135,8 @@ kubectl get pods                        # 查看资源对象，查�
 kubectl get rc,service                  # 查看资源对象，查看rc和service列表
 kubectl get pod,svc,ep --show-labels    # 查看pod,svc,ep能及标签信息
 kubectl get all --all-namespaces        # 查看所有的命名空间
+kubectl explain Deployment              # 查看Deployment文档
+kubectl explain Deployment.spec         # 查看Deployment.spec的文档
 ```
 
 **kubernetes资源对象类型**

@@ -10,61 +10,219 @@
 
 # 一 入门
 
-主要包含k8s是什么、组件、工作流程、主要功能和优势。
+<!DOCTYPE html>
+<html>
+ <head> 
+  <meta charset="utf-8" /> 
+  <title>入门</title> 
+  <style>
+table, td, th
+{
+	border:1px solid green;
+}
+th
+{
+	background-color:green;
+	color:white;
+}
+</style> 
+ </head> 
+ <body> 
+  <table> 
+   <tbody>
+    <tr> 
+     <th>序号</th> 
+     <th>标题</th> 
+     <th>主要内容</th> 
+    </tr> 
+    <tr> 
+     <td>1</td> 
+     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td> 
+     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td> 
+    </tr> 
+   </tbody>
+  </table>  
+ </body>
+</html>
 
-<table border="0">
-<tr>
-   <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td>
-</tr>
-</table>
+
+
 
 
 
 # 二 安装部署
 
-主要介绍以kubeadm方式部署单主和多主高可用方式、k8s版本升级。
+<!DOCTYPE html>
+<html>
+ <head> 
+  <meta charset="utf-8" /> 
+  <title>安装部署</title> 
+  <style>
+table, td, th
+{
+	border:1px solid green;
+}
+th
+{
+	background-color:green;
+	color:white;
+}
+</style> 
+ </head> 
+ <body> 
+  <table> 
+   <tbody>
+    <tr> 
+     <th>序号</th> 
+     <th>标题</th> 
+     <th>主要内容</th> 
+    </tr> 
+    <tr> 
+     <td>1</td> 
+     <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td> 
+     <td>包含kubeadm介绍、部署、Flannel网络插件安装、node节点加入与移除、dashboard面板部署</td> 
+    </tr>
+     <tr> 
+     <td>2</td> 
+     <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td> 
+     <td>包含k8s高可用架构说明、etcd高可用集群、nginx+keepalived四层高可用代理、kubeadm部署高可用集群</td> 
+    </tr>
+    <tr> 
+     <td>3</td> 
+     <td><a href="安装部署/kubectl命令与资源管理.md">kubectl命令与资源管理</a></td> 
+     <td>包含kubectl命令工具介绍、docker中mysql备份还原、k8s中mysql备份还原</td> 
+    </tr>
+    <tr> 
+     <td>4</td> 
+     <td><a href="安装部署/kubernetes版本升级.md">kubernetes版本升级</a></td> 
+     <td>包含二进制升级方式、kubeadm升级集群</td> 
+    </tr> 
+   </tbody>
+  </table>  
+ </body>
+</html>
 
-<table border="0">
-<tr>
-   <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td>
-   <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td>
-   <td><a href="安装部署/kubectl命令与资源管理.md">kubectl命令与资源管理</a></td>
-   <td><a href="安装部署/kubernetes版本升级.md">kubernetes版本升级</a></td>
-</tr>
-</table>
+
+
 
 
 # 三 数据存储
 
-主要包含volume存储卷类型、PV资源池、PVC资源请求、共享存储NFS使用、StorageClass类存储、GlusterFS 持久化存储等。
-
-<table border="0">
-<tr>
-   <td><a href="数据存储/Volume存储卷.md">Volume存储卷</a></td>
-   <td><a href="数据存储/PV和PVC.md">PV和PVC</a></td>
-   <td><a href="数据存储/StorageClass.md">StorageClass</a></td>
-   <td><a href="数据存储/GlusterFS持久化存储.md">GlusterFS 持久化存储</a></td>
+<!DOCTYPE html>
+<html>
+ <head> 
+  <meta charset="utf-8" /> 
+  <title>数据存储</title> 
+  <style>
+table, td, th
+{
+	border:1px solid green;
+}
+th
+{
+	background-color:green;
+	color:white;
+}
+</style> 
+ </head> 
+ <body> 
+  <table> 
+   <tbody>
+    <tr> 
+     <th>序号</th> 
+     <th>标题</th> 
+     <th>主要内容</th> 
+    </tr> 
+    <tr> 
+     <td>1</td> 
+     <td><a href="数据存储/Volume存储卷.md">Volume存储卷</a></td> 
+     <td>包含Volume存储卷、emptyDir临时存储卷、hostPath节点存储卷、NFS网络存储卷等介绍</td> 
     </tr>
-</table>
+     <tr> 
+     <td>2</td> 
+     <td><a href="数据存储/PV和PVC.md">PV和PVC</a></td> 
+     <td>包含PV和PVC概念、生命周期、NFS网络存储卷使用</td> 
+    </tr>
+    <tr> 
+     <td>3</td> 
+     <td><a href="数据存储/StorageClass.md">StorageClass</a></td> 
+     <td>包含StorageClass介绍、运行流程、关键参数、动态卷使用（NFS相关）、回收策略</td> 
+    </tr>
+    <tr> 
+     <td>4</td> 
+     <td><a href="数据存储/GlusterFS持久化存储.md">GlusterFS 持久化存储</a></td> 
+     <td>包含GlusterFS介绍、集群搭建、手动挂载使用GlusterFS过程、GlusterFS+Heketi+StorageClass动态挂载使用</td> 
+    </tr> 
+   </tbody>
+  </table>  
+ </body>
+</html>
+
+
+
 
 
 # 四 Pod与控制器
 
-主要包含Pod概念、Pod的创建、重启、终止过程；livenessProbe、readinessProbe存活和就绪探针、Node、Pod软硬亲和性；taints污点、tolerations容忍度
-
-<table border="0">
-<tr>
-   <td><a href="Pod与控制器/Pod介绍.md">Pod介绍</a></td>
-   <td><a href="Pod与控制器/Pod生命周期.md">Pod生命周期</a></td>
-   <td><a href="Pod与控制器/Pod健康状态.md">Pod健康状态</a></td>
-   <td><a href="Pod与控制器/Pod资源调度.md">Pod资源调度</a></td>
-</tr>
-<tr>
-   <td><a href="Pod与控制器/Pod资源管理与QoS.md">Pod资源管理与QoS</a></td>
-   <td><a href="Pod与控制器/Pod控制器.md">Pod控制器</a></td>
-</tr>
-</table>
-
+<!DOCTYPE html>
+<html>
+ <head> 
+  <meta charset="utf-8" /> 
+  <title>Pod与控制器</title> 
+  <style>
+table, td, th
+{
+	border:1px solid green;
+}
+th
+{
+	background-color:green;
+	color:white;
+}
+</style> 
+ </head> 
+ <body> 
+  <table> 
+   <tbody>
+    <tr> 
+     <th>序号</th> 
+     <th>标题</th> 
+     <th>主要内容</th> 
+    </tr> 
+    <tr> 
+     <td>1</td> 
+     <td><a href="Pod与控制器/Pod介绍.md">Pod介绍</a></td> 
+     <td>包含Pod概念、组成、定义和基本用法、静态Pod、Pod故障归类与排除方法</td> 
+    </tr>
+     <tr> 
+     <td>2</td> 
+     <td><a href="Pod与控制器/Pod生命周期.md">Pod生命周期</a></td> 
+     <td>包含Pod状态、创建过程、重启策略、持久性与终止过程</td> 
+    </tr>
+    <tr> 
+     <td>3</td> 
+     <td><a href="Pod与控制器/Pod健康状态.md">Pod健康状态</a></td> 
+     <td>包含livenessProbe存活探测、readinessProbe就绪探测</td> 
+    </tr>
+    <tr> 
+     <td>4</td> 
+     <td><a href="Pod与控制器/Pod资源调度.md">Pod资源调度</a></td> 
+     <td>包含常用预选策略、node硬亲和性与软亲和性、Pod硬亲和性、Pod软亲和性、Pod反亲和性、taints污点、tolerations容忍度、Pod优先级和抢占式调度</td> 
+    </tr>
+	<tr> 
+     <td>5</td> 
+     <td><a href="Pod与控制器/Pod资源管理与QoS.md">Pod资源管理与QoS</a></td> 
+     <td>包含Requests资源需求和Limits资源限制、QoS分类</td> 
+    </tr>
+    <tr> 
+     <td>6</td> 
+     <td><a href="Pod与控制器/Pod控制器.md">Pod控制器</a></td> 
+     <td>包含Pod控制器概述、RC和RC、Deployment、DaemonSet、StatefulSet、Job、CronJob等控制器</td> 
+    </tr> 
+   </tbody>
+  </table>  
+ </body>
+</html>
 
 
 
@@ -132,7 +290,6 @@
         <td><a href="k8s使用常见问题.md">k8s使用常见问题</a></td>
     </tr>
 </table>    
-
 
 
 

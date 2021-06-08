@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: myjob-v2
+spec:
+  completions: 5
+  parallelism: 2
+  backoffLimit: 5
+  activeDeadlineSeconds: 100
+  template:
+    spec:
+      containers:
+      - name: myjob
+        image: alpine
+        command: ["/bin/sh", "-c", "sleep 120"]
+      restartPolicy: OnFailure
+

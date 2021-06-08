@@ -311,4 +311,4 @@ readiness-exec   1/1     Running             0          38s
 
 
 
-# 3 startupProbe启动探针
+# 3 startupProbe启动探测

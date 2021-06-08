@@ -1,0 +1,12 @@
+apiVersion:  batch/v1
+kind: Job
+metadata:
+  name: myjob-v1
+spec:
+  template:
+     spec:
+        containers:
+            - name: job
+              image: busybox
+              command: ["echo","hello k8s world!"]
+        restartPolicy: Never

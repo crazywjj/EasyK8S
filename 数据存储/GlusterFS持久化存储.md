@@ -922,7 +922,7 @@ glusterfs-x9tc2   0/1     Running   4          10m
 查看详情：
 
 ```bash
-kubectl describe pod glusterfs-9wr4v
+$ kubectl describe pod glusterfs-9wr4v
 ```
 
 会发现没有启动：
@@ -1169,14 +1169,14 @@ $ file -s /dev/vdb
 
 执行此命令后会生成一个  [heketi-storage.json](yaml\heketi-storage.json)  的文件：
 
-```
+```bash
 $ heketi-cli setup-openshift-heketi-storage
 Saving heketi-storage.json
 ```
 
 可能报错：
 
-```
+```yaml
 Error: Failed to allocate new volume: Volume name 'heketidbstorage' already in use
 ```
 
@@ -1215,7 +1215,7 @@ deployment.apps/heketi created
 
 然后就可以进入容器，查看相关信息：
 
-```
+```bash
 $ kubectl exec -it heketi-7d8bd8cd86-5wpn9 -- bash
 [root@heketi-7d8bd8cd86-5wpn9 ~]# heketi-cli cluster list
 Clusters:
@@ -1232,7 +1232,7 @@ Id:aea9ecf91cc200322b66065224bf6cab    Cluster:3b850cd53686c198af9de42e3a378e21 
 
 vim  [storageclass-gluster-heketi.yaml](yaml\storageclass-gluster-heketi.yaml) 
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -1277,11 +1277,11 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      name: nginx
+      name: nginx-deployment
   template:
     metadata:
       labels:
-        name: nginx
+        name: nginx-deployment
     spec:
       containers:
         - name: nginx
@@ -1343,5 +1343,5 @@ $ df -h|grep pvc-0164e460-7ff3-4ad8-b623-98a504c6e7f7
 
 ```
 
-
+由此可以看出，`nginx-deployment`通过`storageClass`自动创建了PV存储，并将存储挂载到了目录`/usr/share/nginx/html`，实现了数据持久化；但是Deployment常用于无状态应用一般不需要数据持久化，可以对比StatefulSet控制器管理的有状态应用通过PVC动态创建模板（volumeClaimTemplates）实现数据持久化。
 
