@@ -10,53 +10,40 @@
 
 # 一 入门
 
-<!DOCTYPE html>
-<html>
- <head> 
-  <meta charset="utf-8" /> 
-  <title>入门</title> 
-  <style>
-table, td, th
-{
-	border:1px solid green;
-}
-th
-{
-	background-color:green;
-	color:white;
-}
-</style> 
-  <table> 
-   <tbody>
-    <tr> 
-     <th>序号</th> 
-     <th>标题</th> 
-     <th>主要内容</th> 
-    </tr> 
-    <tr> 
-     <td>1</td> 
-     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td> 
-     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td> 
-    </tr> 
-   </tbody>
-  </table>  
-
-
-# 二 安装部署
-
-<table cellpadding="1" border="1">
+<table cellpadding="2" border="2">
    <tbody>
     <tr> 
      <th bgcolor="green">序号</th> 
      <th bgcolor="green">标题</th> 
      <th bgcolor="green">主要内容</th> 
     </tr> 
-  <tr> 
+    <tr> 
+     <td>1</td> 
+     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td> 
+     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td> 
+     </tr>
+   </tbody>
+</table>
+
+
+
+
+
+# 二 安装部署
+
+<table cellpadding="2" border="2">
+   <tbody>
+    <tr> 
+     <th bgcolor="green">序号</th> 
+     <th bgcolor="green">标题</th> 
+     <th bgcolor="green">主要内容</th> 
+    </tr> 
+    <tr> 
      <td>1</td> 
      <td><a href="安装部署/kubeadm部署--单主集群.md">kubeadm部署--单主集群</a></td> 
      <td>包含kubeadm介绍、部署、Flannel网络插件安装、node节点加入与移除、dashboard面板部署</td> 
-    </tr>
-     <tr> 
+     </tr>
+    <tr> 
      <td>2</td> 
      <td><a href="安装部署/kubeadm部署--多主集群.md">kubeadm部署--多主集群</a></td> 
      <td>包含k8s高可用架构说明、etcd高可用集群、nginx+keepalived四层高可用代理、kubeadm部署高可用集群</td> 
