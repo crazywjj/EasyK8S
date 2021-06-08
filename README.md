@@ -10,17 +10,17 @@
 
 # 一 入门
 
-<table cellpadding="2" border="2">
+<table cellpadding="2" border="1">
    <tbody>
     <tr> 
-     <th bgcolor="green">序号</th> 
-     <th bgcolor="green">标题</th> 
-     <th bgcolor="green">主要内容</th> 
-    </tr> 
-    <tr> 
-     <td>1</td> 
-     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td> 
-     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td> 
+     <th bgcolor="green">序号</th>
+     <th bgcolor="green">标题</th>
+     <th bgcolor="green">主要内容</th>
+    </tr>
+    <tr>
+     <td>1</td>
+     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td>
+     <td>包含k8s是什么、组件、工作流程、主要功能和优势</td>
      </tr>
    </tbody>
 </table>
