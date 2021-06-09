@@ -1181,7 +1181,7 @@ job控制器的spec字段内嵌的必要字段仅为template，它的使用方�
 
 vim  [myjob-v1.yaml](yaml\myjob-v1.yaml) 
 
-```
+```yaml
 apiVersion:  batch/v1
 kind: Job
 metadata:
@@ -1226,8 +1226,6 @@ Completed At:   Tue, 08 Jun 2021 11:03:06 +0800
 Duration:       13s
 Pods Statuses:  0 Running / 1 Succeeded / 0 Failed
 ```
-
-
 
 > ==**注意：**==Job的RestartPolicy（重启策略）仅支持Never和OnFailure两种，不支持Always，Job就相当于来执行一个批处理任务，执行完就结束了，如果支持Always的话会陷入了死循环了。
 
@@ -1298,9 +1296,297 @@ CronJob 控制器的 spec 字段可嵌套使用以下字段：
 
 通过如下命令获取以上FIELDS详细：
 
+```bash
+$ kubectl explain cronjob.spec
 ```
-kubectl explain cronjob.spec
+
+vim  [mycronjob.yaml](yaml\mycronjob.yaml) 
+
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mycronjob  #Cronjob的名称
+  labels:
+    app: mycronjob
+spec:
+  schedule: "*/1 * * * *"   #job执行的周期，cron格式的字符串
+  jobTemplate:  #job模板
+    metadata:
+      labels:
+        app: mycronjob
+    spec:
+     parallelism: 2
+     template:
+       spec:
+         containers:
+         - name: mycronjob
+           image: busybox
+           command: ["/bin/sh","-c","date;echo  Hello from the Kubernetes cluster"] #job具体执行的任务
+         restartPolicy: OnFailure
+
 ```
+
+执行后查看：
+
+```bash
+$ kubectl create -f  my-cronjob.yaml
+cronjob.batch/cronjob-test created
+
+
+$ kubectl get po
+NAME                         READY   STATUS              RESTARTS   AGE
+mycronjob-1623216780-5c7zz   0/1     ContainerCreating   0          7s
+mycronjob-1623216780-vgljh   0/1     ContainerCreating   0          7s
+
+$ kubectl logs mycronjob-1623216780-5c7zz
+Wed Jun  9 05:33:52 UTC 2021
+Hello from the Kubernetes cluster
+
+$ kubectl get po
+NAME                         READY   STATUS      RESTARTS   AGE
+mycronjob-1623216780-5c7zz   0/1     Completed   0          22s
+mycronjob-1623216780-vgljh   0/1     Completed   0          22s	
+
+$ kubectl get cronjob -l app=mycronjob
+NAME        SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+mycronjob   */1 * * * *   False     0        50s             90s
+```
+
+可列出的 Job 对象的数量取决于CronJob 资源的` .spec successfu!JobsHistoryLimit` 的属性值，默认为3。
+
+
+
+
+
+# 8 HPA横向自动扩容
+
+## 8.1 介绍
+
+通过手工执行kubectl scale命令，我们可以实现Pod扩容或缩容。 显然不符合谷歌对Kubernetes的定位目标—自动化、智能化。
+
+Kubernetes有一个Horizontal Pod Autoscaling（Pod横向自动扩容，HPA）的资源，可以根据CPU使用率或应用自定义metrics自动扩展Pod数量。
+
+> ==**注意**：==从kubernetes1.11开始Heapster被废弃不在使用，metrics-server 替代了heapster。实现HPA首先需要部署metrics-server，一个集群级别的资源利用率数据的聚合器。
+
+Horizontal Pod Autoscaling可以根据CPU使用率或应用自定义metrics自动扩展Pod数量（支持replication controller、deployment和replica set）。
+
+- 控制管理器每隔30s（可以通过–horizontal-pod-autoscaler-sync-period修改）查询metrics的资源使用情况
+- 支持三种metrics类型
+  - 预定义metrics（比如Pod的CPU）以利用率的方式计算
+  - 自定义的Pod metrics，以原始值（raw value）的方式计算
+  - 自定义的object metrics
+- 支持两种metrics查询方式：Heapster和自定义的REST API
+- 支持多metrics
+
+
+
+<img src="assets/image-20210421181105500-1623218085675.png" alt="image-20210421181105500-1623218085675" style="zoom: 50%;" />
+
+
+
+
+
+HPA与之前的RC、Deployment一样，也属于一种Kubernetes资源对象。通过追踪分析指定RC控制的所有目标Pod的负载变化情况，来 确定是否需要调整目标Pod的副本数量，这是HPA的实现原理。
+
+**当前，HPA有以下两种方式作为Pod负载的度量指标：**
+
+- **CPU UtilizationPercentage**：是一个算术平均值，即目标Pod所有副本自身的CPU利用率的平均值。 一个Pod自身的CPU利用率是该Pod当前CPU的使用量除以它的Pod Request的值，比如定义一个Pod的Pod Request为0.4，而当前Pod的CPU使用量为0.2，则它的CPU使用率为 50%，如果目标Pod没有定义Pod Request的值，则无法使用 CPU UtilizationPercentage实现Pod横向自动扩容。
+- **应用程序自定义的度量指标**：比如服务在每秒内的相应请求数（TPS或QPS）。 
+
+
+
+## 8.2 根据CPU进行HPA伸缩过程
+
+```bash
+# 创建pod和service
+# kubectl run php-apache --image=registry.cn-beijing.aliyuncs.com/crazywjj/hpa-example:V1.0 --requests=cpu=200m --expose --port=80
+
+cat >php-apache.yaml<<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: registry.cn-beijing.aliyuncs.com/crazywjj/hpa-example:V1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  labels:
+    run: php-apache
+spec:
+  ports:
+  - port: 80
+  selector:
+    run: php-apache
+EOF
+
+$ kubectl create -f  php-apache.yaml
+service "php-apache" created
+deployment "php-apache" created
+
+# 命令行创建autoscaler
+$ kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10
+deployment "php-apache" autoscaled
+或者
+vim hpa.yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+  namespace: default
+spec:
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    kind: Deployment
+    name: php-apache
+  targetCPUUtilizationPercentage: 50
+
+$ kubectl get hpa
+NAME         REFERENCE               TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   0%/50%    1         10        1          16m
+
+# 增加负载,需要一段时间
+$ kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://php-apache; done"
+
+# 查看hpa负载
+$ kubectl get hpa
+NAME         REFERENCE               TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   191%/50%   1         10        1          16m
+
+# 查看hpa详情
+$ kubectl describe hpa php-apache
+
+# autoscaler将这个deployment扩展为5个pod
+$ kubectl get deployment php-apache
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+php-apache   5/5     5            5           18m
+
+# 删除刚才创建的负载增加pod后会发现负载降低，并且pod数量也自动降回1个（也需要一段时间）
+$ kubectl delete pod load-generator
+$ kubectl get hpa
+NAME         REFERENCE                     TARGET    CURRENT   MINPODS   MAXPODS   AGE
+php-apache   Deployment/php-apache/scale   50%       0%        1         10        11m
+
+$ kubectl get deployment php-apache
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+php-apache   1/1     1            1           23m
+```
+
+
+
+**HPA伸缩过程：**
+
+- 收集HPA控制下所有Pod最近的cpu使用情况（CPU utilization）
+- 对比在扩容条件里记录的cpu限额（CPUUtilization） • 调整实例数（必须要满足不超过最大/最小实例数）
+- 每隔30s做一次自动扩容的判断 CPU utilization的计算方法是用cpu usage（最近一分钟的平均值，通过metrics可以直接获取到）除以 cpu request（这里cpu request就是我们在创建容器时制定的cpu使用核心数）得到一个平均值，这个 平均值可以理解为：平均每个Pod CPU核心的使用占比。
+
+**HPA进行伸缩算法：**
+
+- 计算公式：TargetNumOfPods = ceil(sum(CurrentPodsCPUUtilization) / Target)
+- ceil()表示取大于或等于某数的最近一个整数
+- 每次扩容后冷却3分钟才能再次进行扩容，而缩容则要等5分钟后。
+- 当前Pod Cpu使用率与目标使用率接近时，不会触发扩容或缩容;
+- 触发条件：avg(CurrentPodsConsumption) / Target >1.1 或 <0.9
+
+##  8.3 基于多项度量指标进行HPA伸缩
+
+*custom metrics*（自定义度量指标）： 即 Pod 度量指标和 Object 度量指标。 这些度量指标可能具有特定于集群的名称，并且需要更高级的集群监控设置。
+
+使用方法
+
+- 控制管理器开启 `--horizontal-pod-autoscaler-use-rest-clients`
+- 控制管理器配置的 `--master` 或者 `--kubeconfig`
+- 在 API Server Aggregator 中注册自定义的 metrics API，如 https://github.com/kubernetes-incubator/custom-metrics-apiserver 和 https://github.com/kubernetes/metrics
+
+> 注：可以参考 [k8s.io/metics](https://github.com/kubernetes/metrics) 开发自定义的 metrics API server。
+
+比如 HorizontalPodAutoscaler 保证每个 Pod 占用 50% CPU、1000pps 以及 10000 请求 / s：
+
+```yml
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: AverageUtilization
+        averageUtilization: 50
+  - type: Pods
+    pods:
+      metric:
+        name: packets-per-second
+      target:
+        type: AverageValue
+        averageValue: 1k
+  - type: Object
+    object:
+      metric:
+        name: requests-per-second
+      describedObject:
+        apiVersion: networking.k8s.io/v1beta1
+        kind: Ingress
+        name: main-route
+      target:
+        kind: Value
+        value: 10k
+status:
+  observedGeneration: 1
+  lastScaleTime: <some-time>
+  currentReplicas: 1
+  desiredReplicas: 1
+  currentMetrics:
+  - type: Resource
+    resource:
+      name: cpu
+    current:
+      averageUtilization: 0
+      averageValue: 0
+  - type: Object
+    object:
+      metric:
+        name: requests-per-second
+      describedObject:
+        apiVersion: networking.k8s.io/v1beta1
+        kind: Ingress
+        name: main-route
+      current:
+        value: 10k
+```
+
+https://kubernetes.io/zh/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
 
 
 

@@ -337,7 +337,7 @@ Horizontal Pod Autoscaling可以根据CPU使用率或应用自定义metrics自�
 - 支持两种metrics查询方式：Heapster和自定义的REST API
 - 支持多metrics
 
-![image-20210421181105500](assets/image-20210421181105500.png)
+![image-20210421181105500](assets/image-20210421181105500-1623218085675.png)
 
 
 

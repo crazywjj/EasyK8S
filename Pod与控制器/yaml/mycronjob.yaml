@@ -1,0 +1,22 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mycronjob  #Cronjob的名称
+  labels:
+    app: mycronjob
+spec:
+  schedule: "*/1 * * * *"   #job执行的周期，cron格式的字符串
+  jobTemplate:  #job模板
+    metadata:
+      labels:
+        app: mycronjob
+    spec:
+     parallelism: 2
+     template:
+       spec:
+         containers:
+         - name: mycronjob
+           image: busybox
+           command: ["/bin/sh","-c","date;echo  Hello from the Kubernetes cluster"] #job具体执行的任务
+         restartPolicy: OnFailure
+

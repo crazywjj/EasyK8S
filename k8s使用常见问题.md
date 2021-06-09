@@ -92,5 +92,27 @@ Readiness probe failed: Failed to get D-Bus connection: Operation not permitted
 
 
 
+# 7 k8s中containers的command用法错误
 
+```bash
+$ kubectl get po
+NAME                            READY   STATUS              RESTARTS   AGE
+cronjob-test-1623209100-4j59c   0/1     CrashLoopBackOff    2          75s
+cronjob-test-1623209100-d8wh8   0/1     CrashLoopBackOff    2          75s
+cronjob-test-1623209160-9pc54   0/1     ContainerCreating   0          15s
+cronjob-test-1623209160-pv7h5   0/1     ContainerCreating   0          15s
+
+
+$ kubectl describe pod cronjob-test-1623209160-9pc54
+...
+  Warning  Failed     <invalid>                      kubelet            Error: failed to start container "my-cronjob": Error response from daemon: OCI runtime create failed: container_linux.go:348: starting container process caused "exec: \"bash\": executable file not found in $PATH": unknown
+```
+
+发现：
+
+```
+command: ["bash","-c","date;echo  Hello from the Kubernetes cluster"] #job具体执行的任务
+```
+
+在describe详细中看到因为找不到command命令的$PATH导致，改为`/bin/sh`后就可以了。
 

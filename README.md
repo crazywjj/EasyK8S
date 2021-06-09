@@ -27,8 +27,6 @@
 
 
 
-
-
 # 二 安装部署
 
 <table cellpadding="2" border="1">
@@ -62,10 +60,6 @@
 </table>
 
 
-
-
-
-
 # 三 数据存储
 
 <table cellpadding="2" border="1">
@@ -97,10 +91,6 @@
     </tr> 
    </tbody>
 </table>
-
-
-
-
 
 
 # 四 Pod与控制器
@@ -140,8 +130,27 @@
     <tr> 
      <td>6</td> 
      <td><a href="Pod与控制器/Pod控制器.md">Pod控制器</a></td> 
-     <td>包含Pod控制器概述、RC和RC、Deployment、DaemonSet、StatefulSet、Job、CronJob等控制器</td> 
+     <td>包含Pod控制器概述、RC和RC、Deployment、DaemonSet、StatefulSet、Job、CronJob、HPA横向自动扩容等控制器</td> 
     </tr> 
+   </tbody>
+</table>
+
+
+
+# 五 ConfigMap和Secret
+
+<table cellpadding="2" border="1">
+   <tbody>
+    <tr> 
+     <th bgcolor="green"><font face="微软雅黑" color="white">序号</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">标题</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">主要内容</font></th>
+    </tr>
+ <tr> 
+     <td>1</td> 
+     <td><a href="ConfigMap和Secret/ConfigMap.md">ConfigMap</a></td> 
+     <td>包含</td> 
+    </tr>
    </tbody>
 </table>
 
@@ -150,7 +159,6 @@
 
 
 
-# 五 ConfigMap和Secret
 
 
 
