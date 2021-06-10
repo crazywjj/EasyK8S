@@ -14,6 +14,8 @@
 
 <img src="assets/configmap.png" alt="configmap" style="zoom:67%;" />
 
+
+
 ConfigMap 和Secret是Kubernetes 系统上两种特殊类型的存储卷。
 
 ConfigMap是一种用于**存储应用所需配置信息的资源类型**，用于保存配置数据的键值对，可以用来保存单个属性，也可以用来保存配置文件。
@@ -27,6 +29,8 @@ ConfigMap注入的方式一般有两种，一种是**挂载存储卷**，一种�
 
 
 # 2 ConfigMap典型用法
+
+<img src="assets/20200103132558830.gif" alt="20200103132558830" style="zoom:67%;" />
 
 ConfigMap供容器使用的典型用法如下：
 
@@ -245,29 +249,385 @@ ConfigMap最为常见的使用方式就是在环境变量和Volume中引用。
 
 ## 4.1 在环境变量中引用ConfigMap
 
-创建cm信息：
+在pod中可以使用 `$(VAR_NAME)` Kubernetes 替换语法在容器的 `command` 和 `args` 部分中使用 ConfigMap 定义的环境变量。例如：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: k8s.gcr.io/busybox
+      command: [ "/bin/sh", "-c", "echo $(SPECIAL_LEVEL_KEY) $(SPECIAL_TYPE_KEY)" ]
+      env:
+        - name: SPECIAL_LEVEL_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: SPECIAL_LEVEL
+        - name: SPECIAL_TYPE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: SPECIAL_TYPE
+  restartPolicy: Never
+  
+```
+
+**创建cm信息**
 
 ```bash
 $ kubectl create configmap test-configmap --from-literal=server_port=88 --from-literal=server_name=www.crazyk8s.com
 ```
 
+- **引用部分键值对**
+
+使用`valueFrom`、`configMapKeyRef`、`name`、`key`指定要用的key。
+
 创建pod引用：
 
+vim  [mypod-cm-v1.yaml](assets\mypod-cm-v1.yaml) 
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod-cm-v1
+spec:
+  containers:
+  - name: mypod
+    image: busybox
+    args: [ "/bin/sh", "-c", "sleep 3000" ]
+    env:
+    - name: SERVER_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: test-configmap
+          key: server_port
+    - name: SERVER_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: test-configmap
+          key: server_name
+
+```
+
+创建后查看：
+
+```bash
+$ kubectl create -f  mypod-cm-v1.yaml
+pod/mypod-cm-v1 created
+
+$ kubectl get po mypod-cm-v1
+NAME                      READY   STATUS      RESTARTS   AGE
+mypod-cm-v1               1/1     Running     0          4s
+
+$ kubectl exec -it mypod-cm-v1 -- env|grep SERVER
+SERVER_PORT=88
+SERVER_NAME=www.crazyk8s.com
+
+```
+
+- **引用所有键值对**
+
+还可以通过`envFrom`、`configMapRef`、`name`使得configmap中的所有`key/value`键值对都自动变成环境变量。
+
+vim  [mypod-cm-v2.yaml](assets\mypod-cm-v2.yaml) 
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod-cm-v2
+spec:
+  containers:
+  - name: mypod
+    image: busybox
+    args: [ "/bin/sh", "-c", "sleep 3000" ]
+    envFrom:
+    - configMapRef:
+        name: test-configmap
+
+```
+
+创建后查看：
+
+```bash
+$ kubectl create -f mypod-cm-v2.yaml
+pod/mypod-cm-v2 created
+
+$ kubectl get po mypod-cm-v2
+NAME          READY   STATUS    RESTARTS   AGE
+mypod-cm-v2   1/1     Running   0          6s
+
+$ kubectl exec -it mypod-cm-v2 -- env|grep server
+server_name=www.crazyk8s.com
+server_port=88
+
+```
 
 
 
+## 4.2 通过volumeMount使用ConfigMap
+
+若ConfigMap 对象中的键值内容较长，那么使用环境变量将其导人会使得变量值占据过多的内存而且不易处理。此类数据通常用于为容器应用提供配置文件，因此将其内容直接作为文件进行引用方为较好的选择。
+
+创建configmap存储卷：
+
+vim  [nginx.conf](yaml\nginx.conf) 
+
+```bash
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  65535;
+}
+
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush     on;
+    keepalive_timeout  65;
+    gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+
+```
+
+vim   [www.conf](yaml\www.conf) 
+
+```bash
+server {
+    listen 80;
+    server_name www.crazy.com;
+
+    location / {
+    root html;
+    index index.html index.htm;
+  }
+}
+
+```
+
+创建：
+
+```bash
+$ kubectl create cm nginx-conf --from-file=nginx.conf --from-file=www.conf
+```
 
 
 
+### 4.2.1 挂载ConfigMap所有键值到目录
+
+当**容器内目录为空**时，configmap会直接挂载到目录下；目录不为空时，会清空目录下内容，然后挂载；目录不存在时，会先新建目录，然后挂载；
+
+vim  [nginx-cm-demo.yaml](yaml\nginx-cm-demo.yaml) 
+
+```bash
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cm-demo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx-cm-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-cm-demo
+    spec:
+      volumes:
+      - name: config                      #volumes的名称
+        configMap:
+          name: nginx-conf                #指定使用ConfigMap的名称
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config                    #指定上面的volumes名称
+          mountPath: "/etc/app"           #容器挂载的目录
+          #subPath: nginx.conf
+
+```
+
+创建查看：
+
+```bash
+$ kubectl create -f nginx-cm-demo.yaml
+
+$ kubectl get pod nginx-cm-demo-85f9c99b-znj8l
+NAME                           READY   STATUS    RESTARTS   AGE
+nginx-cm-demo-85f9c99b-znj8l   1/1     Running   0          6m34s
+
+#进入容器验证
+$ kubectl exec -it nginx-cm-demo-85f9c99b-znj8l -- /bin/bash
+root@nginx-cm-demo-85f9c99b-znj8l:/# cd /etc/app
+root@nginx-cm-demo-85f9c99b-znj8l:/etc/app# ls
+nginx.conf  www.conf
+root@nginx-cm-demo-85f9c99b-znj8l:/etc/app# cat www.conf
+server {
+          listen       80;
+          server_name  www.crazy.com;
+          add_header Cache-Control no-cache;
+
+          location / {
+            root   /usr/share/nginx/html;
+            proxy_read_timeout 220s
+            index  index.html index.htm;
+          }
+            error_page   500 502 503 504  /50x.html;
+          location = /50x.html {
+            root   html;
+          }
+      }
+
+```
 
 
 
+### 4.2.2 挂载ConfigMap的部分键值到目录
+
+修改`nginx-cm-demo.yaml`部分内容后为： [nginx-cm-demo-V1.yaml](yaml\nginx-cm-demo-V1.yaml) 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cm-demo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx-cm-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-cm-demo
+    spec:
+      volumes:
+      - name: config                      #volumes的名称
+        configMap:
+          name: nginx-conf                #指定使用ConfigMap的名称
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+            mode: 0644
+          - key: www.conf
+            path: www.conf
+            mode: 0644
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config                    #指定上面的volumes名称
+          mountPath: "/etc/app1"   #容器挂载的目录
+
+```
+
+创建后查看：
+
+```bash
+$ kubectl create -f nginx-cm-demo.yaml
+deployment.apps/nginx-cm-demo created
+
+$ kubectl get pod
+NAME                             READY   STATUS    RESTARTS   AGE
+nginx-cm-demo-859f774bc6-gzkld   1/1     Running   0          3s
+
+$ kubectl exec  -it nginx-cm-demo-859f774bc6-gzkld -- cat /etc/app1/www.conf
+server {
+          listen       80;
+          server_name  www.crazy.com;
+          add_header Cache-Control no-cache;
+
+          location / {
+            root   /usr/share/nginx/html;
+            proxy_read_timeout 220s
+            index  index.html index.htm;
+          }
+            error_page   500 502 503 504  /50x.html;
+          location = /50x.html {
+            root   html;
+          }
+      }
+
+```
+
+configMap 存储卷的 items 字段的值是一个对象列表，可嵌套使用的字段有三个，具体如下:
+
+- `key <string>`： 要引用 键名称 ，必选字段。
+- `path <string>`： 对应的键于挂载点目录中生成的文件的相对路径 ，可 以不同于键名称，必选字段。
+- `mode <integer>` ：文件的权限模型，可用范围为 0至0777
 
 
 
+注意：以上方法虽会清空该文件夹的内容，但我们通常配置文件存放的位置，都是一个空的文件夹，并且该方法有一个优点：就是我们在外面apply应用配置文件后，容器里的配置文件会自动刷新到新的配置，此时我们再通过软重启的方式，将容器加载最新的配置文件进行运行
+
+### 4.2.3 单独挂载ConfigMap的键值到文件
+
+如果想单独建ConfigMap的键值内容挂载到某个目录下，而不影响目录下其他文件时，就需要用到容器的 `VolumeMounts `字段中的
+
+`subPath `字段来解决，它可以支持用户从存储卷挂载单个文件或单个目录而非整个存储卷。
+
+vim  [nginx-cm-demo-V2.yaml](yaml\nginx-cm-demo-V2.yaml) 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cm-demo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx-cm-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-cm-demo
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-conf
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/nginx.conf"
+          subPath: nginx.conf
+        - name: config
+          mountPath: "/etc/nginx/conf.d/www.conf" 
+          subPath: www.conf
+
+```
 
 
 
+注意：此方法虽然不会覆盖或删除当前文件夹的内容，但是修改配置文件后的内容，容器里不能自动更新，必须对该容器进行删除（不能进行软重启），重新运行，会导致业务中断，短暂数据丢失的可能发生。
 
 
 

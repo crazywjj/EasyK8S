@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod-cm-v2
+spec:
+  containers:
+  - name: mypod
+    image: busybox
+    args: [ "/bin/sh", "-c", "sleep 3000" ]
+    envFrom:
+    - configMapRef:
+        name: test-configmap
+

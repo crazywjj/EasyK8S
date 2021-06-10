@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cm-demo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx-cm-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-cm-demo
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: nginx-conf
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/nginx.conf"
+          subPath: nginx.conf
+        - name: config
+          mountPath: "/etc/nginx/conf.d/www.conf" 
+          subPath: www.conf

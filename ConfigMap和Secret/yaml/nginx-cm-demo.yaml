@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cm-demo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: nginx-cm-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-cm-demo
+    spec:
+      volumes:
+      - name: config                      #volumes的名称
+        configMap:
+          name: nginx-conf                #指定使用ConfigMap的名称
+      containers:
+      - name: nginx
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config                    #指定上面的volumes名称
+          mountPath: "/etc/app"   #容器挂载的目录（空的）
+          #subPath: nginx.conf
+
