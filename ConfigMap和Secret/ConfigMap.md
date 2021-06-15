@@ -279,10 +279,10 @@ spec:
 **创建cm信息**
 
 ```bash
-$ kubectl create configmap test-configmap --from-literal=server_port=88 --from-literal=server_name=www.crazyk8s.com
+$ kubectl create configmap nginx-configmap --from-literal=server_port=80 --from-literal=server_name=www.crazyk8s.com
 ```
 
-- **引用部分键值对**
+### 4.1.1 引用部分键值对
 
 使用`valueFrom`、`configMapKeyRef`、`name`、`key`指定要用的key。
 
@@ -304,12 +304,12 @@ spec:
     - name: SERVER_PORT
       valueFrom:
         configMapKeyRef:
-          name: test-configmap
+          name: nginx-configmap
           key: server_port
     - name: SERVER_NAME
       valueFrom:
         configMapKeyRef:
-          name: test-configmap
+          name: nginx-configmap
           key: server_name
 
 ```
@@ -325,12 +325,12 @@ NAME                      READY   STATUS      RESTARTS   AGE
 mypod-cm-v1               1/1     Running     0          4s
 
 $ kubectl exec -it mypod-cm-v1 -- env|grep SERVER
-SERVER_PORT=88
+SERVER_PORT=80
 SERVER_NAME=www.crazyk8s.com
 
 ```
 
-- **引用所有键值对**
+### 4.1.2 引用所有键值对
 
 还可以通过`envFrom`、`configMapRef`、`name`使得configmap中的所有`key/value`键值对都自动变成环境变量。
 
@@ -348,7 +348,7 @@ spec:
     args: [ "/bin/sh", "-c", "sleep 3000" ]
     envFrom:
     - configMapRef:
-        name: test-configmap
+        name: nginx-configmap
 
 ```
 
@@ -364,7 +364,7 @@ mypod-cm-v2   1/1     Running   0          6s
 
 $ kubectl exec -it mypod-cm-v2 -- env|grep server
 server_name=www.crazyk8s.com
-server_port=88
+server_port=80
 
 ```
 
@@ -466,7 +466,6 @@ spec:
         volumeMounts:
         - name: config                    #指定上面的volumes名称
           mountPath: "/etc/app"           #容器挂载的目录
-          #subPath: nginx.conf
 
 ```
 
@@ -631,17 +630,203 @@ spec:
 
 
 
+# 5 ConfigMap更新
+
+Kubernetes中提供configmap，用来管理应用的配置，configmap具备热更新的能力，但只有通过目录挂载的configmap才具备热更新能力，其余通过环境变量或者subPath挂载的文件都不能动态更新。
+
+在kubernetes中，更新configMap后，pod是不会自动识别configMap中的变动。configMap更新后，如果让pod中引用configMap的变量生效。
+
+通常简单的做法是:
+方法1. 删除该pod，让其自动产生一份新的pod.
+方法2. 修改pod的配置，让其自动产生一份新的pod.
+方法3. 增加一个sidecar，让其监控configMap的变化，来重启pod.
+
+原理就是：通过更新deployment中的Annotations，增加一个version的key,每次需要更新configMap,只要upgrade一次kustomization.yaml中的commonAnnotations->version的值，发布后，pod就会自动重建一次，以此来发现confiMap的新值。
 
 
 
 
 
+## 5.1 测试ConfigMap热更新
+
+- 基于变量挂载
+
+创建cm和应用引入变量
+
+```bash
+$ kubectl create configmap nginx-configmap --from-literal=server_port=80 --from-literal=server_name=www.crazyk8s.com
+
+# 用4.1 中的应用进行测试
+
+$ kubectl create -f  mypod-cm-v1.yaml
+pod/mypod-cm-v1 created
+
+$ kubectl get po mypod-cm-v1
+NAME                      READY   STATUS      RESTARTS   AGE
+mypod-cm-v1               1/1     Running     0          4s
+
+$ kubectl exec -it mypod-cm-v1 -- env|grep SERVER
+SERVER_PORT=80
+SERVER_NAME=www.crazyk8s.com
+
+# 修改cm键值对
+$ kubectl edit cm nginx-configmap
+
+apiVersion: v1
+data:
+  server_name: www.crazyk8s.com
+  server_port: "88"   #修改此处端口
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2021-06-11T03:14:29Z"
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:data:
+        .: {}
+        f:server_name: {}
+        f:server_port: {}
+    manager: kubectl
+    operation: Update
+    time: "2021-06-11T03:14:29Z"
+  name: nginx-configmap
+  namespace: default
+  resourceVersion: "12762652"
+  selfLink: /api/v1/namespaces/default/configmaps/nginx-configmap
+  uid: 87a830c9-5e6d-4180-a228-2ce4feb87668
+
+# 会发现pod中的变量并未发生变化
+$ kubectl exec -it mypod-cm-v1 -- env|grep SERVER
+SERVER_PORT=80
+SERVER_NAME=www.crazyk8s.com
+
+```
 
 
 
+- 基于目录挂载
+
+使用4.2案例进行测试。
+
+创建cm：
+
+```bash
+$ kubectl create cm nginx-conf --from-file=nginx.conf --from-file=www.conf
+
+$ kubectl get cm nginx-conf -o yaml
+apiVersion: v1
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  1;
+
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
 
 
+    events {
+        worker_connections  65535;
+    }
 
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        sendfile        on;
+        tcp_nopush     on;
+        keepalive_timeout  65;
+        gzip  on;
+
+        include /etc/nginx/conf.d/*.conf;
+    }
+  www.conf: |
+    server {
+        listen 80;
+        server_name www.crazy.com;
+
+        location / {
+        root html;
+        index index.html index.htm;
+      }
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2021-06-11T03:28:12Z"
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:data:
+        .: {}
+        f:nginx.conf: {}
+        f:www.conf: {}
+    manager: kubectl
+    operation: Update
+    time: "2021-06-11T03:28:12Z"
+  name: nginx-conf
+  namespace: default
+  resourceVersion: "12764175"
+  selfLink: /api/v1/namespaces/default/configmaps/nginx-conf
+  uid: f38780e7-1eab-4a44-8fa9-0eb25f52fa1a
+
+```
+
+创建应用引用cm：
+
+```
+$ kubectl create -f nginx-cm-demo.yaml
+$ kubectl get pod
+NAME                           READY   STATUS    RESTARTS   AGE
+nginx-cm-demo-85f9c99b-892k2   1/1     Running   0          10s
+
+$ kubectl exec -it nginx-cm-demo-85f9c99b-892k2 -- ls /etc/app
+nginx.conf  www.conf
+
+$ kubectl exec -it nginx-cm-demo-85f9c99b-892k2 -- cat /etc/app/www.conf
+server {
+    listen 80;
+    server_name www.crazy.com;
+
+    location / {
+    root html;
+    index index.html index.htm;
+  }
+}
+
+```
+
+修改cm：
+
+```bash
+$ kubectl edit cm nginx-conf
+www.conf: |
+    server {
+        listen 88;   #修改此处端口为88
+        server_name www.crazy.com;
+
+# 等待约10s后查看，会发现pod内的配置已经发生变化
+$ kubectl exec -it nginx-cm-demo-85f9c99b-892k2 -- cat /etc/app/www.conf
+server {
+    listen 88;
+    server_name www.crazy.com;
+
+    location / {
+    root html;
+    index index.html index.htm;
+  }
+}
+
+```
+
+此时pod内已经发现ConfigMap的配置已经发生变化，但是pod内容器其实加载的还是旧的配置，需要重启或者重建pod才能加载新的配置。
 
 
 

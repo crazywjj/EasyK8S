@@ -148,10 +148,16 @@
  <tr> 
      <td>1</td> 
      <td><a href="ConfigMap和Secret/ConfigMap.md">ConfigMap</a></td> 
-     <td>包含</td> 
+     <td>包含ConfigMap介绍、创建方式、使用方式、更新</td> 
     </tr>
+  <tr> 
+     <td>2</td> 
+     <td><a href="ConfigMap和Secret/Secret.md">Secret</a></td> 
+     <td>包含</td> 
+    </tr> 
    </tbody>
-</table>
+</table>  
+
 
 
 
@@ -171,31 +177,46 @@
 
 # 八 生态周边
 
-<table border="0">
-<tr>
-   <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
-   <td><a href="生态周边/kube-prometheus监控.md">kube-prometheus监控</a></td>
-</tr>
+<table cellpadding="2" border="1">
+   <tbody>
+    <tr> 
+     <th bgcolor="green"><font face="微软雅黑" color="white">序号</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">标题</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">主要内容</font></th>
+    </tr>
+ <tr> 
+     <td>1</td> 
+     <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
+     <td>包含</td> 
+    </tr>
+  <tr> 
+     <td>2</td> 
+     <td><a href="生态周边/kube-prometheus监控.md">kube-prometheus监控</a></td>
+     <td>包含</td> 
+    </tr>     
+     <tr> 
+     <td>3</td> 
+     <td><a href="生态周边/Reloader.md">Reloader</a></td>
+     <td>包含</td> 
+    </tr>
+   </tbody>
 </table>
 
 
 
 
 
+
+
+
+
+
 <table border="0">
-<tr>
-   <td><a href="Kubernetes学习/Node.md">Node</a></td>
-   <td><a href="Kubernetes学习/Pod.md">Pod</a></td>
-   <td><a href="Kubernetes学习/Label.md">Label</a></td>
-   <td><a href="Kubernetes学习/RC(Replication Co.mdntroller).md">RC(Replication Controller)</a></td>
-</tr>
-<tr>
-   <td><a href="Kubernetes学习/Deployment.md">Deployment</a></td>
-</tr>
 <tr>
    <td><a href="Kubernetes学习/02-kubernetes的基本概念.md">02-kubernetes的基本概念</a></td>
 </tr>
 </table>
+
 
 
 # 附录
