@@ -153,25 +153,51 @@
   <tr> 
      <td>2</td> 
      <td><a href="ConfigMap和Secret/Secret.md">Secret</a></td> 
-     <td>包含</td> 
+     <td>包含Secret概述、创建方式、使用方法</td> 
     </tr> 
    </tbody>
 </table>  
 
 
 
+# 六 Service和服务发现
 
-
-
-
-
-
-
-# 六 Service与服务发现
-
+<table cellpadding="2" border="1">
+   <tbody>
+    <tr> 
+     <th bgcolor="green"><font face="微软雅黑" color="white">序号</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">标题</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white">主要内容</font></th>
+    </tr>
+ <tr> 
+     <td>1</td> 
+     <td><a href="Service和服务发现/Service.md">ConfigMap</a></td> 
+     <td>包含</td> 
+    </tr>
+  <tr> 
+     <td>2</td> 
+     <td><a href="ConfigMap和Secret/Secret.md">Secret</a></td> 
+     <td>包含</td> 
+    </tr> 
+   </tbody>
+</table>  
 
 
 # 七 集群管理
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

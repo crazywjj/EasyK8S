@@ -2,15 +2,9 @@
 
 
 
-
-
-
-
 # Secret
 
 Secret对象与ConfigMap对象类似，但它主要用于存储以下敏感信息，例如密码，OAuth token和SSH key等等。将这些信息存储在secret中，或直接存储在Pod的定义中，与Docker镜像定义中相比，更加安全和灵活。
-
-
 
 
 
@@ -245,8 +239,6 @@ SECRET_PASSWORD=123456
 
 
 
-
-
 ## 3.2 通过 Volume 方式
 
 > ==**注意**==：以 **Volume** 方式使用的 **Secret** 支持动态更新。也就是说 **Secret** 更新后，容器中的数据也会更新。
@@ -382,3 +374,4 @@ root
 
 
 
+​	
