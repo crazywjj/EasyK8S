@@ -171,7 +171,7 @@
     </tr>
  <tr> 
      <td>1</td> 
-     <td><a href="Service和服务发现/Service.md">ConfigMap</a></td> 
+     <td><a href="Service和服务发现/Service.md">Service</a></td> 
      <td>包含</td> 
     </tr>
   <tr> 
@@ -181,6 +181,7 @@
     </tr> 
    </tbody>
 </table>  
+
 
 
 # 七 集群管理
