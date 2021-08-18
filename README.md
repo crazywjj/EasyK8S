@@ -183,8 +183,6 @@
 </table>  
 
 
-
-
 # 七 集群管理
 
 <table cellpadding="2" border="1">
@@ -202,21 +200,15 @@
   <tr> 
      <td>2</td> 
      <td><a href="集群管理/Node管理.md">Node管理</a></td> 
+     <td>包含Node扩容与删除、隔离与恢复</td> 
+    </tr> 
+   <tr> 
+     <td>3</td> 
+     <td><a href="集群管理/Namespace命名空间.md">Namespace命名空间</a></td> 
      <td>包含</td> 
     </tr> 
    </tbody>
 </table>  
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -246,21 +238,6 @@
      <td>包含</td> 
     </tr>
    </tbody>
-</table>
-
-
-
-
-
-
-
-
-
-
-<table border="0">
-<tr>
-   <td><a href="Kubernetes学习/02-kubernetes的基本概念.md">02-kubernetes的基本概念</a></td>
-</tr>
 </table>
 
 
