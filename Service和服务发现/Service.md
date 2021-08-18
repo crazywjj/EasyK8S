@@ -455,6 +455,42 @@ Headless Service 对象没有 ClusterIP ，于是 kube-proxy 便无须处理此�
 
 ## 7.1 创建 Headless Se vice 资源
 
+配置Service 资源清单时，只需要将 ClusterIP 字段的值设置为“ None ”即可将其定义为Headles。
+
+vim  [myapp-headless-svc.yaml](yaml\myapp-headless-svc.yaml)
+
+```yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: myapp-headless-svc
+spec:
+  clusterIP: None
+  selector:
+    app: myapp
+  ports:
+  - port: 80
+    targetPort: 80
+    name: httpport
+
+```
+
+使用资源创建命令“ kubectl create 或“ kubectl apply“ ，完成资源创建后，使用相关的查看命令获取 Service 资源的相关信息便可以 出，它没有ClusterIP ，不过，如果标签选择器能够匹配到相关的 Pod 资源，它便拥有 Endpoints ，这些 Endpoints 对象会作为 DNS资源记录名称 myapp-headless-svc 询时的 A 记录解析结果。
+
+
+
+## 7.2 Pod 资源发现
+
+根据 Headles Service 的工作特性可知，它记录于 Cluster DNS 的 A 记录的相关解析结果是后端 Pod 资源的 IP 地址，这就意味着客户端通过此 Service 资源的名称发现的是各 Pod资源。
+
+
+
+
+
+
+
+
+
 
 
 

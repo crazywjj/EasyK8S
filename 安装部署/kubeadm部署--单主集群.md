@@ -572,7 +572,7 @@ y73dhn.yx380f2ufue3ophb
 78b884a6cebf6d6c08b411ff77c062463654e2c7da00eb4afec242f60fa709e2
 ```
 
-然后节点加入集群
+然后节点加入集群。
 
 
 
