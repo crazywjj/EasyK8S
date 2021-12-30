@@ -284,13 +284,13 @@ scheduler: {}
 # 查看需要的镜像
 kubeadm config images list --config kubeadm-init.yaml
 输出：
-k8s.gcr.io/kube-apiserver:v1.18.0
-k8s.gcr.io/kube-controller-manager:v1.18.0
-k8s.gcr.io/kube-scheduler:v1.18.0
-k8s.gcr.io/kube-proxy:v1.18.0
-k8s.gcr.io/pause:3.2
-k8s.gcr.io/etcd:3.4.3-0
-k8s.gcr.io/coredns:1.6.7
+registry.cn-hangzhou.aliyuncs.com/google_containers/kube-apiserver:v1.18.0
+registry.cn-hangzhou.aliyuncs.com/google_containers/kube-controller-manager:v1.18.0
+registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler:v1.18.0
+registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy:v1.18.0
+registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.2
+registry.cn-hangzhou.aliyuncs.com/google_containers/etcd:3.4.3-0
+registry.cn-hangzhou.aliyuncs.com/google_containers/coredns:1.6.7
 
 # 拉取需要的镜像
 kubeadm config images pull --config kubeadm-init.yaml
@@ -464,7 +464,7 @@ flannel 默认会使用主机的第一张物理网卡，如果你有多张网卡
 vim kube-flannel.yml
       containers:
       - name: kube-flannel
-        image: quay.io/coreos/flannel:v0.12.0-amd64
+        image: quay.io/coreos/flannel:v0.15.0
         command:
         - /opt/bin/flanneld
         args:
@@ -527,14 +527,10 @@ node上也是需要下载安装一些镜像的，需要下载的镜像为：kube
 ```shell
 $ docker images
 REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
-quay.io/coreos/flannel   v0.12.0-ppc64le     bc2581fdbbc4        4 hours ago         70.3MB
-k8s.gcr.io/pause         3.2                 877251810461        4 hours ago         683kB
-k8s.gcr.io/kube-proxy    v1.18.0             6d1eac3bcac6        5 hours ago         117MB
-quay.io/coreos/flannel   v0.12.0-s390x       59b06ff3da1b        15 hours ago        56.9MB
-quay.io/coreos/flannel   v0.12.0-arm64       249df3c55115        15 hours ago        53.6MB
-quay.io/coreos/flannel   v0.12.0-arm         17b3e9df2be2        15 hours ago        47.8MB
-quay.io/coreos/flannel   v0.12.0-amd64       66efeb957edc        17 hours ago        52.8MB
-
+quay.io/coreos/flannel                                                        v0.15.0             09b38f011a29        2 weeks ago         69.5MB
+rancher/mirrored-flannelcni-flannel-cni-plugin                                v1.2                98660e6e4c3a        3 weeks ago         8.98MB
+registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy                v1.18.0             43940c34f24f        19 months ago       117MB
+registry.cn-hangzhou.aliyuncs.com/google_containers/pause                     3.2                 80d28bedfe5d        20 months ago       683kB
 ```
 
 不知道令牌，可以在主节点上运行以该命令:

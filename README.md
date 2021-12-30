@@ -174,13 +174,9 @@
      <td><a href="Service和服务发现/Service.md">Service</a></td> 
      <td>包含Service资源及实现模型、Service代理模型、Service资源应用、服务发现、服务暴露、Headless</td> 
     </tr>
-  <tr> 
-     <td>2</td> 
-     <td><a href="ConfigMap和Secret/Secret.md">Secret</a></td> 
-     <td>包含</td> 
-    </tr> 
    </tbody>
 </table>  
+
 
 
 # 七 集群管理
@@ -211,8 +207,6 @@
 </table>  
 
 
-
-
 # 八 生态周边
 
 <table cellpadding="2" border="1">
@@ -237,8 +231,40 @@
      <td><a href="生态周边/Reloader.md">Reloader</a></td>
      <td>包含</td> 
     </tr>
+    <tr> 
+     <td>4</td> 
+     <td><a href="生态周边/Helm应用包管理工具.md">Helm应用包管理工具</a></td>
+     <td>包含</td> 
+    </tr>
    </tbody>
 </table>
+
+
+# 九 常见问题
+
+<table cellpadding="2" border="1">
+   <tbody>
+    <tr> 
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+    </tr>
+ <tr> 
+     <td><a href="常见问题/etcd数据损坏修复.md">etcd数据损坏修复</a></td>
+      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
+      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
+      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
+    </tr>
+  <tr> 
+   </tbody>
+</table>
+
+
+
+
+
+
 
 
 

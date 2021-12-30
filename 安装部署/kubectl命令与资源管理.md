@@ -207,15 +207,15 @@ kubectl scale deployment nginx --replicas 3    # 缩容
 
 ## 1.3 集群管理命令
 
-| 集群管理命令 | 解释                             |
-| ------------ | -------------------------------- |
-| certificate  | 修改证书资源                     |
-| cluster-info | 显示集群信息                     |
-| top          | 显示资源使用，需要Heapster运行   |
-| cordon       | 标记节点不可被调度               |
-| uncordon     | 标记几点可被调度                 |
-| drain        | 驱逐姐弟啊上的应用，准备下线维护 |
-| taint        | 修改节点taint标记                |
+| 集群管理命令 | 解释                           |
+| ------------ | ------------------------------ |
+| certificate  | 修改证书资源                   |
+| cluster-info | 显示集群信息                   |
+| top          | 显示资源使用，需要Heapster运行 |
+| cordon       | 标记节点不可被调度             |
+| uncordon     | 标记几点可被调度               |
+| drain        | 驱逐节点上的应用，准备下线维护 |
+| taint        | 修改节点taint标记              |
 
 示例：
 

@@ -674,9 +674,9 @@ spec:
 
 
 
-# 5 k8s动态存储管理GlusterFS+Heketi(容器化方式)
+# 5 k8s动态存储管理GlusterFS+Heketi(容器化)
 
-注意：清理掉上边测试中所产生的任何东西。
+注意：清理掉上边测试中所产生的所有东西。
 
 ## 5.1 准备工作
 
@@ -742,7 +742,6 @@ wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/gl
 wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/heketi-bootstrap.json
 wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/heketi-deployment.json
 wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/heketi-service-account.json
-wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/heketi-start.sh
 wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/heketi.json
 wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/topology-sample.json
 ```
@@ -751,7 +750,9 @@ wget https://raw.githubusercontent.com/heketi/heketi/master/extras/kubernetes/to
 
 ### 5.2.1 部署GlusterFS服务
 
-GlusterFS管理服务容器以DaemonSet的方式进行部署，确保在每个Node上都运行一个GlusterFS管理服务。 [glusterfs-daemonset.json](yaml\glusterfs-daemonset.json) 的内容如下：
+GlusterFS管理服务容器以DaemonSet的方式进行部署，确保在每个Node上都运行一个GlusterFS管理服务。
+
+[glusterfs-daemonset.json](yaml\glusterfs-daemonset.json) 的内容如下：
 
 ```json
 {
@@ -996,15 +997,25 @@ $ kubectl create clusterrolebinding heketi-gluster-admin --clusterrole=edit --se
 
 2）部署Heketi服务：
 
-- 创建一个Kubernetes secret来保存我们Heketi实例的配置
+- **创建一个Kubernetes secret来保存我们Heketi实例的配置**
 
 必须将配置文件的执行程序设置为 kubernetes才能让Heketi server控制gluster pod。
 
 修改heketi.json的配置如下：
 
 ```bash
+#打开认证
+  "use_auth": true,
+......
+#修改admin用户的key
+      "key": "adminkey"
+......
+#修改user用户的key
+      "key": "userkey"
+......
 #修改执行插件为kubernetes
     "executor": "kubernetes",
+......
 #备份heketi数据库
     "backup_db_to_kube_secret": true
 ```
@@ -1015,11 +1026,11 @@ $ kubectl create clusterrolebinding heketi-gluster-admin --clusterrole=edit --se
 $ kubectl create secret generic heketi-config-secret --from-file=./heketi.json
 ```
 
-- 运行heketi的deploy容器
+- **运行heketi的deploy容器**
 
 修改heketi-bootstrap.json配置如下；或者在`https://hub.docker.com/r/heketi/heketi`查看一下镜像版本。
 
-```
+```bash
 "image": "heketi/heketi:9"   # 以GitHub为准，确保能和后边的客户端保持一致
 ```
 
@@ -1057,7 +1068,7 @@ export HEKETI_CLI_SERVER=http://localhost:18080
 
 
 
-- 修改Heketi管理的GlusterFS集群的信息
+- **修改Heketi管理的GlusterFS集群的信息**
 
 确保hostnames/manage指向下面显示的确切名称kubectl get nodes，并且hostnames/storage是存储网络的IP地址。
 
@@ -1137,7 +1148,7 @@ cat  [topology-sample.json](yaml\topology-sample.json)
 执行：
 
 ```bash
-$ heketi-cli topology load --json=topology-sample.json
+$ heketi-cli --user admin --secret adminkey topology load --json=topology-sample.json
 ```
 
 报错如下：
@@ -1161,16 +1172,20 @@ $ pvremove /dev/vdb
   
 $ file -s /dev/vdb
 /dev/vdb: data
+
+或者
+dd if=/dev/zero of=/dev/vdb bs=512K count=1
+dmsetup remove_all   删除所有物理卷
 ```
 
 
 
-- 使用Heketi为它配置一个卷来存储其数据库
+- **使用Heketi为它配置一个卷来存储其数据库**
 
 执行此命令后会生成一个  [heketi-storage.json](yaml\heketi-storage.json)  的文件：
 
 ```bash
-$ heketi-cli setup-openshift-heketi-storage
+$ heketi-cli --user admin --secret adminkey setup-openshift-heketi-storage
 Saving heketi-storage.json
 ```
 
@@ -1192,15 +1207,21 @@ service/heketi-storage-endpoints created
 job.batch/heketi-storage-copy-job created
 ```
 
+
+
 - 等到作业完成然后删除引导程序Heketi
 
 ```bash
+$ kubectl get job
+NAME                      COMPLETIONS   DURATION   AGE
+heketi-storage-copy-job   1/1           2s         4m7s
+
 $ kubectl delete all,service,jobs,deployment,secret --selector="deploy-heketi"
 ```
 
 
 
-- 创建Heketi的deployment应用
+- **创建Heketi的deployment应用**
 
 修改  [heketi-deployment.json](yaml\heketi-deployment.json)  中镜像`"image": "heketi/heketi:dev"`为`"image": "heketi/heketi:9"`。
 
@@ -1211,17 +1232,17 @@ service/heketi created
 deployment.apps/heketi created
 ```
 
-这样做，Heketi数据库将保留在GlusterFS卷中，并且每次重启Heketi pod时都不会重置。
+这样做，heketi数据库将保留在GlusterFS卷中，并且每次重启Heketi pod时都不会重置。
 
 然后就可以进入容器，查看相关信息：
 
 ```bash
 $ kubectl exec -it heketi-7d8bd8cd86-5wpn9 -- bash
-[root@heketi-7d8bd8cd86-5wpn9 ~]# heketi-cli cluster list
+[root@heketi-7d8bd8cd86-5wpn9 ~]# heketi-cli --user admin --secret adminkey cluster list
 Clusters:
 Id:3b850cd53686c198af9de42e3a378e21 [file][block]
 
-[root@heketi-7d8bd8cd86-5wpn9 ~]# heketi-cli volume list
+[root@heketi-7d8bd8cd86-5wpn9 ~]# heketi-cli --user admin --secret adminkey volume list
 Id:aea9ecf91cc200322b66065224bf6cab    Cluster:3b850cd53686c198af9de42e3a378e21    Name:heketidbstorage
 
 ```
@@ -1230,7 +1251,14 @@ Id:aea9ecf91cc200322b66065224bf6cab    Cluster:3b850cd53686c198af9de42e3a378e21 
 
 ### 5.2.3 定义StorageClass
 
-vim  [storageclass-gluster-heketi.yaml](yaml\storageclass-gluster-heketi.yaml) 
+获取heketi的resturl地址：
+
+```
+$ kubectl get svc/heketi --template 'http://{{.spec.clusterIP}}:{{(index .spec.ports 0).port}}'
+http://10.97.129.230:8080
+```
+
+修改 vim  [storageclass-gluster-heketi.yaml](yaml\storageclass-gluster-heketi.yaml) 
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -1242,14 +1270,17 @@ metadata:
 provisioner: kubernetes.io/glusterfs
 allowVolumeExpansion: true
 parameters:
-  resturl: "http://10.101.86.169:8080"
-  clusterid: "3b850cd53686c198af9de42e3a378e21"
+  resturl: "http://10.97.129.230:8080"
+  restauthenabled: "true"
+  restuser: "admin"
+  restuserkey: "adminkey"
   volumetype: "replicate:3"
+
 ```
 
-Provisioner参数必须被设置为“kubernetes.io/glusterfs”。 
+- Provisioner参数必须被设置为“kubernetes.io/glusterfs”。 
 
-resturl的地址需要被设置为API Server所在主机可以访问到的Heketi服务的某个地址，可以使用服务ClusterIP+端口号、容器IP地址+端口号，或将服务映射到物理机，使用物理机IP+NodePort。 
+- resturl 的地址需要被设置为API Server所在主机可以访问到的Heketi服务的某个地址，可以使用服务ClusterIP+端口号、容器IP地址+端口号，或将服务映射到物理机，使用物理机IP+NodePort。 
 
 执行：
 
@@ -1261,6 +1292,44 @@ NAME                         PROVISIONER               RECLAIMPOLICY   VOLUMEBIN
 glusterfs-heketi (default)   kubernetes.io/glusterfs   Delete          Immediate           true                   5s
 
 ```
+
+这是直接将userkey明文写入配置文件创建storageclass的方式，官方推荐将key使用secret保存。示例如下：
+
+```bash
+# glusterfs-secret.yaml内容如下：
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: heketi-secret
+  namespace: default
+data:
+  # base64 encoded password. E.g.: echo -n "adminkey" | base64
+  key: YWRtaW5rZXk=
+type: kubernetes.io/glusterfs
+
+
+# storageclass-glusterfs.yaml内容修改如下：
+
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: glusterfs-heketi
+provisioner: kubernetes.io/glusterfs
+parameters:
+  resturl: "http://10.97.129.230:8080"
+  restauthenabled: "true"
+  restuser: "admin"
+  secretNamespace: "default"
+  secretName: "heketi-secret"
+  gidMin: "40000"
+  gidMax: "50000"
+  volumetype: "replicate:3"
+```
+
+更详细的用法参考：https://kubernetes.io/docs/concepts/storage/storage-classes/#glusterfs
+
+
 
 
 
