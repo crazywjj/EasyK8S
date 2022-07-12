@@ -218,7 +218,7 @@ done
 
 # 3 部署 etcd 高可用集群
 
-本次采用二进制外部部署实现该可用。官网也有kubeadm搭建高可用的etcd。
+本次采用二进制外部部署实现高可用。官网也有kubeadm搭建高可用的etcd。
 
 >  https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/setup-ha-etcd-with-kubeadm/ 
 
