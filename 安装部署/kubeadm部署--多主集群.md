@@ -1226,7 +1226,7 @@ etcd-0               Healthy   {"health":"true"}
 
 **5、查看ipvs路由规则**
 
-```
+```bash
 for node in 10.0.0.{61..63}
 do
     echo -e "\033[42;37m >>> ${node} <<< \033[0m"
@@ -1299,12 +1299,6 @@ UDP  10.96.0.10:53 rr
 将master1关机，如果还是可以执行kubectl命令，创建pod等，说明高可用搭建成功。
 
 这是因为vip已漂移到master2，只要VIP存在，apiserver就还是可以接收我们的指令。
-
-
-
-
-
-
 
 
 
