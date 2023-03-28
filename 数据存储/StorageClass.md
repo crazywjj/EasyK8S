@@ -313,7 +313,7 @@ StorageClass创建完成后，开发人员只需要在 PVC 里指定要使用的
 
 ## 4.5 创建 PVC 请求文件
 
-vim  [nfs-pvc02.yaml](yaml\nfs-pvc02.yaml) 
+vim  [nfs-pvc02.yaml](yaml\nfs-pvc02.yaml)
 
 ```yml
 apiVersion: v1

@@ -306,7 +306,7 @@ chmod +x /usr/local/bin/*
 **1、创建ca证书文件**
 
 ```bash
-cd /etc/kubernetes/pki
+cd /etc/etcd/pki
 cfssl print-defaults config > ca-config.json
 cfssl print-defaults csr > ca-csr.json
 
@@ -520,10 +520,10 @@ done
 etcd首次进程启动会等待其他节点加入etcd集群，启动第一个etcd，可能会卡住；因为单独etcd还无法进行选举；当三个etcd都启动后，即可恢复正常。启动完后查看状态。
 
 ```bash
-for node_ip in 10.0.0.{61..63}
+for node in 10.0.0.{61..63}
 do
-    echo -e "\033[42;37m >>> ${node_ip} <<< \033[0m"
-    ssh -fn root@${node_ip} "systemctl daemon-reload && systemctl enable etcd && systemctl restart etcd && systemctl status etcd|grep Active"
+    echo -e "\033[42;37m >>> ${node} <<< \033[0m"
+    ssh -fn root@${node} "systemctl daemon-reload && systemctl enable etcd && systemctl restart etcd && systemctl status etcd|grep Active"
 done
 ```
 
@@ -532,11 +532,11 @@ done
 **查看集群健康状态：**
 
 ```bash
-for node_ip in 10.0.0.{61..63}
+for node in 10.0.0.{61..63}
   do
-    echo -e "\033[42;37m >>> ${node_ip} <<< \033[0m"
+    echo -e "\033[42;37m >>> ${node} <<< \033[0m"
     ETCDCTL_API=3 /usr/local/bin/etcdctl \
-    --endpoints=https://${node_ip}:2379 \
+    --endpoints=https://${node}:2379 \
     --cacert=/etc/etcd/pki/ca.pem \
     --cert=/etc/etcd/pki/server.pem \
     --key=/etc/etcd/pki/server-key.pem endpoint health
@@ -936,7 +936,10 @@ apiVersion: kubeadm.k8s.io/v1beta2
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: "10.0.0.88:8443"
-controllerManager: {}
+controllerManager:
+  extraArgs:
+    allocate-node-cidrs: "true"
+    cluster-cidr: "10.244.0.0/16"
 dns:
   type: CoreDNS
 etcd:
@@ -1050,7 +1053,7 @@ kubeadm join 10.0.0.88:8443 --token abcdef.0123456789abcdef \
 
 ```
 
- 上面有2个 `kubeadm join` ，之前在单主模式下，只会出现worker node的加入命令。 
+上面有2个 `kubeadm join` ，之前在单主模式下，只会出现worker node的加入命令。 
 
 设置KUBERNETES_MASTER环境变量：
 

@@ -261,8 +261,10 @@ apiServer:
 apiVersion: kubeadm.k8s.io/v1beta2
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
-controlPlaneEndpoint: "10.0.0.88:6443"    #haproxy负载均衡ip和端口
-controllerManager: {}
+controllerManager:
+  extraArgs:
+    allocate-node-cidrs: "true"
+    cluster-cidr: "10.244.0.0/16"
 dns:
   type: CoreDNS
 etcd:
@@ -468,7 +470,7 @@ vim kube-flannel.yml
         command:
         - /opt/bin/flanneld
         args:
-        - --ip-masq
+        - --ip-masqgrep
         - --kube-subnet-mgr
         - --iface=ens33		# 指定网卡
 ```

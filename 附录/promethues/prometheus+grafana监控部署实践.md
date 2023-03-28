@@ -644,7 +644,7 @@ mv alertmanager amtool /usr/local/bin/
 ### 2.设置启动用户
 
 ```bash
-chown -R prometheus:prometheus /usr/local/bin/prometheus
+chown -R prometheus:prometheus /usr/local/bin/alertmanager
 ```
 
 ### 3.设置开机自启
@@ -659,7 +659,7 @@ After=network.target
 [Service]
 # Type设置为notify时，服务会不断重启
 Type=simple
-User=root
+User=prometheus
 ExecStart=/opt/prometheus/alertmanager \
  --config.file=/opt/prometheus/alertmanager.yml
 
@@ -976,4 +976,44 @@ inhibit_rules:
   # Apply inhibition if the alertname is the same.
   equal: ['alertname', 'instance']
 ```
+
+
+
+
+
+# Prometheus添加Basic认证
+
+
+
+```
+yum install -y httpd-tools
+
+htpasswd -nBC 12 '' | tr -d ':\n'
+New password:               # 这里设置密码为123456
+Re-type new password: 
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

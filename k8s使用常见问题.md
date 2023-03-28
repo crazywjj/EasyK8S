@@ -116,3 +116,35 @@ command: ["bash","-c","date;echo  Hello from the Kubernetes cluster"] #job具体
 
 在describe详细中看到因为找不到command命令的$PATH导致，改为`/bin/sh`后就可以了。
 
+
+
+# 8 Unable to connect to the server: x509: certificate signed by unknown authority
+
+```bash
+[root@k8s-m01 ~]# kubectl get nodes
+Unable to connect to the server: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "kubernetes")
+
+```
+
+出现这样的报错是什么原因呢？其实有可能是忘记执行脚本程序了。
+
+```bash
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+
+
+# 9 k8s安装flannel报错“node "master" pod cidr not assigned”
+
+在安装flannel网络插件后，发现pod: kube-flannel-ds 一直是CrashLoopBackOff
+
+![image-20230328100514175](assets/image-20230328100514175.png)解决解决办法，在`kubeadm-init.yaml`文件中添加配置（已添加)
+
+```yaml
+controllerManager:  
+  extraArgs:
+    allocate-node-cidrs: "true"
+    cluster-cidr: "10.244.0.0/16"
+```

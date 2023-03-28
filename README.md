@@ -8,7 +8,7 @@
 
 
 
-# 一 入门
+# 一 介绍
 
 <table cellpadding="2" border="1">
    <tbody>
@@ -19,11 +19,12 @@
     </tr>
     <tr>
      <td>1</td>
-     <td><a href="概念介绍/kubernetes介绍.md">kubernetes介绍</a></td>
+     <td><a href="入门/kubernetes概述.md">kubernetes概述</a></td>
      <td>包含kubernetes是什么、组件(API server、Controller-manager、scheduler、kubelet、kube-proxy等)、工作流程、主要功能和优势</td>
      </tr>
    </tbody>
 </table>
+
 
 
 # 二 安装部署
@@ -252,13 +253,11 @@
     </tr>
  <tr> 
      <td><a href="常见问题/etcd数据损坏修复.md">etcd数据损坏修复</a></td>
-      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
-      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
-      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
     </tr>
   <tr> 
    </tbody>
 </table>
+
 
 
 
