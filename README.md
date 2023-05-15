@@ -8,7 +8,7 @@
 
 
 
-# 一 介绍
+# 一 概述
 
 <table cellpadding="2" border="1">
    <tbody>
@@ -19,11 +19,12 @@
     </tr>
     <tr>
      <td>1</td>
-     <td><a href="入门/kubernetes概述.md">kubernetes概述</a></td>
+     <td><a href="概述/kubernetes介绍.md">kubernetes介绍</a></td>
      <td>包含kubernetes是什么、组件(API server、Controller-manager、scheduler、kubelet、kube-proxy等)、工作流程、主要功能和优势</td>
      </tr>
    </tbody>
 </table>
+
 
 
 
@@ -213,32 +214,26 @@
 <table cellpadding="2" border="1">
    <tbody>
     <tr> 
-     <th bgcolor="green"><font face="微软雅黑" color="white">序号</font></th>
-     <th bgcolor="green"><font face="微软雅黑" color="white">标题</font></th>
-     <th bgcolor="green"><font face="微软雅黑" color="white">主要内容</font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
+     <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
     </tr>
  <tr> 
-     <td>1</td> 
+     <td><a href="生态周边/kube-prometheus监控.md">kube-prometheus监控</a></td>
      <td><a href="生态周边/EFK日志收集.md">EFK日志收集</a></td>
-     <td>包含</td> 
+     <td><a href="生态周边/Reloader.md">Reloader</a></td>
+     <td><a href="生态周边/Helm应用包管理工具.md">Helm应用包管理工具</a></td>
     </tr>
   <tr> 
-     <td>2</td> 
-     <td><a href="生态周边/kube-prometheus监控.md">kube-prometheus监控</a></td>
-     <td>包含</td> 
-    </tr>     
-     <tr> 
-     <td>3</td> 
-     <td><a href="生态周边/Reloader.md">Reloader</a></td>
-     <td>包含</td> 
-    </tr>
-    <tr> 
-     <td>4</td> 
-     <td><a href="生态周边/Helm应用包管理工具.md">Helm应用包管理工具</a></td>
-     <td>包含</td> 
+     <td><a href="生态周边/Metrics Server监控数据采集.md">Metrics Server监控数据采集</a></td>
+     <td><a href="生态周边/Dashboard面板.md">Dashboard面板</a></td>
+     <td><a href="生态周边/Coredns.md">Coredns</a></td>
+     <td><a href="生态周边/kube-state-metrics.md">kube-state-metrics</a></td>
     </tr>
    </tbody>
 </table>
+
 
 
 # 九 常见问题
@@ -252,11 +247,12 @@
      <th bgcolor="green"><font face="微软雅黑" color="white"></font></th>
     </tr>
  <tr> 
-     <td><a href="常见问题/etcd数据损坏修复.md">etcd数据损坏修复</a></td>
+     <td><a href="常见问题/etcd管理.md">etcd管理</a></td>
     </tr>
   <tr> 
    </tbody>
 </table>
+
 
 
 
@@ -268,7 +264,6 @@
 <table border="0">
     <tr>
         <td><a href="附录/01-Kubernets高可用集群.md">01-Kubernets 高可用集群</a></td>
-        <td><a href="附录/02-Kubernetes集群插件.md">02-Kubernetes 集群插件</a></td>
     </tr>
 </table>
 <table border="0">
@@ -284,6 +279,7 @@
         <td><a href="k8s使用常见问题.md">k8s使用常见问题</a></td>
     </tr>
 </table>    
+
 
 
 

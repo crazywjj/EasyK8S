@@ -4,7 +4,7 @@
 
 # Kubernetes介绍
 
-# 1 概述
+# 1 介绍
 
 官网地址：<https://kubernetes.io/>
 

@@ -124,13 +124,13 @@ setenforce 0
 sed -i  '/^SELINUX/s#enforcing#disabled#g' /etc/selinux/config
 ```
 
-如果不关闭防火墙，需要开启如下端口：
+**如果不关闭防火墙，需要开启如下端口：**
 
 控制节点
 
 | Protocol | Port Range | Purpose                 | Used By              |
 | -------- | ---------- | ----------------------- | -------------------- |
-| TCP      | 6443*      | Kubernetes API server   | All                  |
+| TCP      | 6443       | Kubernetes API server   | All                  |
 | TCP      | 2379-2380  | etcd server client API  | kube-apiserver, etcd |
 | TCP      | 10250      | kubelet API             | Self, Control plane  |
 | TCP      | 10251      | kube-scheduler          | Self                 |
@@ -218,12 +218,20 @@ EOF
 yum clean all
 yum makecache
 
-# 安装-由于k8s更新很快，建议制定需要的版本
+# 安装-由于k8s更新很快，建议指定需要的版本
 yum install -y kubelet-1.18.0 kubeadm-1.18.0 kubectl-1.18.0
 systemctl enable --now kubelet
 ```
 
 ## 2.2 初始化 master
+
+**命令行初始化：**
+
+```bash
+kubeadm init --apiserver-advertise-address 10.159.238.10 --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.18.0 --service-cidr=10.96.0.0/12 --pod-network-cidr=10.244.0.0/16
+```
+
+**配置文件初始化：**
 
 **1、获得默认配置文件**
 
@@ -455,7 +463,7 @@ Flannel数据包在主机间转发是由backend实现的，目前已经支持UDP
 **3、下载yml**
 
 ```bash
-curl -o kube-flannel.yml https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+curl -o kube-flannel.yml https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 ```
 
 需要注意的是：
@@ -1075,4 +1083,14 @@ myweb   NodePort   10.107.20.165   <none>        8080:30001/TCP   50s
 ## 4.3 通过浏览器访问网页
 
 浏览器，输入http://虚拟机IP:30001/demo/
+
+
+
+
+
+5 
+
+
+
+
 
